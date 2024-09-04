@@ -1,0 +1,18 @@
+[package]
+name = "rmusic_tui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rmusic = {path = "../rmusic"}
+clap = { version = "4.0", features = [
+    "derive",
+    "cargo",
+    "env",
+] } # command line interface
+simplelog = "0.12" # logging
+log = "0.4" # logging
+cpal = "0.15" # music output
+tokio = { version = "1", features = ["full"] } # async
+
+# ratatui-explorer = "0.1" # file expore wigit
