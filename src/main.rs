@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports)]
 use std::io::stdin;
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -6,12 +7,23 @@ use clap::Parser;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleRate, SupportedStreamConfig};
 use log::{error, LevelFilter};
+use ratatui::crossterm::terminal;
+use ratatui_explorer::FileExplorer;
 use rmusic::database::Library;
 use rmusic::playback_loop::playback_loop;
 use simplelog::TermLogger;
 
 use cli::Cli;
 use rmusic::playback::{PlaybackAction, PlaybackDaemon};
+
+use std::io;
+
+use ratatui::{
+    crossterm::event::{self, KeyCode, KeyEventKind},
+    style::Stylize,
+    widgets::Paragraph,
+    DefaultTerminal,
+};
 
 mod cli;
 
@@ -28,7 +40,7 @@ macro_rules! exit_on_error {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> io::Result<()> {
     let cli = Cli::parse();
     let mut log_config = simplelog::ConfigBuilder::new();
     let mut _quiet = false;
@@ -54,14 +66,14 @@ async fn main() {
     .unwrap();
 
     //Database
-    let database = Library::try_new().await.expect("No database");
-
-    if cli.add_path {
-        database
-            .add_file(&PathBuf::from(&cli.opus_file))
-            .await
-            .expect("database problem");
-    }
+    // let database = Library::try_new().await.expect("No database");
+    //
+    // if cli.add_path {
+    //     database
+    //         .add_file(&PathBuf::from(&cli.opus_file))
+    //         .await
+    //         .expect("database problem");
+    // }
 
     // Audio output
     let host = cpal::default_host();
@@ -86,12 +98,7 @@ async fn main() {
     );
 
     // playback Daemon
-    let mut playback_daemon = PlaybackDaemon::try_new(
-        &cli.opus_file,
-        sample_rate.0 as usize,
-        cli.volume as f32 / 100.0,
-    )
-    .unwrap();
+    let mut playback_daemon = PlaybackDaemon::default();
 
     // Thread communication
     let (tx, rx) = mpsc::channel();
@@ -105,26 +112,45 @@ async fn main() {
         exit_on_error!(device.build_output_stream(&supported_config.into(), decoder, err_fn, None));
     exit_on_error!(stream.play());
 
-    let mut command = String::new();
-    let stdin = stdin();
+    let mut terminal = ratatui::init();
+    terminal.clear()?;
+    let app_result = run(terminal);
+    ratatui::restore();
+    app_result
+    // let mut command = "".to_string();
+    // let stdin = stdin();
+    // loop {
+    //     command.clear();
+    //     exit_on_error!(stdin.read_line(&mut command)); // Ignore all errors for now
+    //     let args: Vec<&str> = command.split_ascii_whitespace().collect();
+    //     match args[0] {
+    //         "q" => break,
+    //         "p" => exit_on_error!(tx.send(PlaybackAction::Playing)),
+    //         "s" => exit_on_error!(tx.send(PlaybackAction::Paused)),
+    //         "f" => exit_on_error!(tx.send(PlaybackAction::FastForward(5))),
+    //         "r" => exit_on_error!(tx.send(PlaybackAction::Rewind(5))),
+    //         "g" => {
+    //             if args.len() < 2 {
+    //                 continue;
+    //             }
+    //             let num = exit_on_error!(args[1].parse::<u64>());
+    //             exit_on_error!(tx.send(PlaybackAction::GoTo(num)))
+    //         }
+    //         _ => continue,
+    //     }
+    // }
+    // Ok(())
+}
+
+fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
+    let mut file_exporer = FileExplorer::new()?;
     loop {
-        command.clear();
-        exit_on_error!(stdin.read_line(&mut command)); // Ignore all errors for now
-        let args: Vec<&str> = command.split_ascii_whitespace().collect();
-        match args[0] {
-            "q" => break,
-            "p" => exit_on_error!(tx.send(PlaybackAction::Playing)),
-            "s" => exit_on_error!(tx.send(PlaybackAction::Paused)),
-            "f" => exit_on_error!(tx.send(PlaybackAction::FastForward(5))),
-            "r" => exit_on_error!(tx.send(PlaybackAction::Rewind(5))),
-            "g" => {
-                if args.len() < 2 {
-                    continue;
-                }
-                let num = exit_on_error!(args[1].parse::<u64>());
-                exit_on_error!(tx.send(PlaybackAction::GoTo(num)))
+        terminal.draw(|frame| frame.render_widget(file_exporer.widget(), frame.area()))?;
+
+        if let event::Event::Key(key) = event::read()? {
+            if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                return Ok(());
             }
-            _ => continue,
         }
     }
 }

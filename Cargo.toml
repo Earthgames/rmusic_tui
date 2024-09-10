@@ -14,5 +14,5 @@ simplelog = "0.12" # logging
 log = "0.4" # logging
 cpal = "0.15" # music output
 tokio = { version = "1", features = ["full"] } # async
-
-# ratatui-explorer = "0.1" # file expore wigit
+ratatui = "0.28"
+ratatui-explorer = "0.1" # file expore wigit

@@ -12,14 +12,13 @@ pub struct Cli {
     #[clap(short, long)]
     #[clap(default_value_t = 2)]
     pub loglevel: u8,
-
-    /// Valume level in percetage
-    #[clap(short, long)]
-    #[clap(default_value_t = 100)]
-    pub volume: u8,
-
-    #[clap(short, long)]
-    pub add_path: bool,
-
-    pub opus_file: String,
+    // /// Valume level in percetage
+    // #[clap(short, long)]
+    // #[clap(default_value_t = 100)]
+    // pub volume: u8,
+    //
+    // #[clap(short, long)]
+    // pub add_path: bool,
+    //
+    // pub opus_file: String,
 }
