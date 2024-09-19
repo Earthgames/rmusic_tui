@@ -145,12 +145,14 @@ async fn main() -> io::Result<()> {
 fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
     let mut file_exporer = FileExplorer::new()?;
     loop {
-        terminal.draw(|frame| frame.render_widget(file_exporer.widget(), frame.area()))?;
+        terminal.draw(|frame| frame.render_widget(&file_exporer.widget(), frame.area()))?;
 
-        if let event::Event::Key(key) = event::read()? {
+        let event = event::read()?;
+        if let event::Event::Key(key) = event {
             if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
                 return Ok(());
             }
         }
+        file_exporer.handle(&event)?;
     }
 }
