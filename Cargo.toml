@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rmusic = {path = "../rmusic"}
+rmusic = {path = "rmusic"}
+ratatui-explorer = {path = "ratatui-explorer"} # file expore wigit
 clap = { version = "4.0", features = [
     "derive",
     "cargo",
@@ -15,4 +16,3 @@ log = "0.4" # logging
 cpal = "0.15" # music output
 tokio = { version = "1", features = ["full"] } # async
 ratatui = "0.28"
-ratatui-explorer = {git = "https://github.com/hcavarsan/ratatui-explorer.git", rev = "7e115a1"} # file expore wigit

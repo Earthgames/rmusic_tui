@@ -2263,7 +2263,6 @@ dependencies = [
 [[package]]
 name = "ratatui-explorer"
 version = "0.1.1"
-source = "git+https://github.com/hcavarsan/ratatui-explorer.git?rev=7e115a1#7e115a1bd6013fb2ceda0bdd1410f59df12dff9e"
 dependencies = [
  "crossterm",
  "derivative",
