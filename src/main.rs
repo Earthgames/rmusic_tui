@@ -75,6 +75,37 @@ async fn main() -> io::Result<()> {
     //         .expect("database problem");
     // }
 
+    let mut terminal = ratatui::init();
+    terminal.clear()?;
+    let app_result = run(terminal);
+    ratatui::restore();
+    app_result
+    // let mut command = "".to_string();
+    // let stdin = stdin();
+    // loop {
+    //     command.clear();
+    //     exit_on_error!(stdin.read_line(&mut command)); // Ignore all errors for now
+    //     let args: Vec<&str> = command.split_ascii_whitespace().collect();
+    //     match args[0] {
+    //         "q" => break,
+    //         "p" => exit_on_error!(tx.send(PlaybackAction::Playing)),
+    //         "s" => exit_on_error!(tx.send(PlaybackAction::Paused)),
+    //         "f" => exit_on_error!(tx.send(PlaybackAction::FastForward(5))),
+    //         "r" => exit_on_error!(tx.send(PlaybackAction::Rewind(5))),
+    //         "g" => {
+    //             if args.len() < 2 {
+    //                 continue;
+    //             }
+    //             let num = exit_on_error!(args[1].parse::<u64>());
+    //             exit_on_error!(tx.send(PlaybackAction::GoTo(num)))
+    //         }
+    //         _ => continue,
+    //     }
+    // }
+    // Ok(())
+}
+
+fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
     // Audio output
     let host = cpal::default_host();
     let device = host
@@ -112,38 +143,7 @@ async fn main() -> io::Result<()> {
         exit_on_error!(device.build_output_stream(&supported_config.into(), decoder, err_fn, None));
     exit_on_error!(stream.play());
 
-    let mut terminal = ratatui::init();
-    terminal.clear()?;
-    let app_result = run(terminal);
-    ratatui::restore();
-    app_result
-    // let mut command = "".to_string();
-    // let stdin = stdin();
-    // loop {
-    //     command.clear();
-    //     exit_on_error!(stdin.read_line(&mut command)); // Ignore all errors for now
-    //     let args: Vec<&str> = command.split_ascii_whitespace().collect();
-    //     match args[0] {
-    //         "q" => break,
-    //         "p" => exit_on_error!(tx.send(PlaybackAction::Playing)),
-    //         "s" => exit_on_error!(tx.send(PlaybackAction::Paused)),
-    //         "f" => exit_on_error!(tx.send(PlaybackAction::FastForward(5))),
-    //         "r" => exit_on_error!(tx.send(PlaybackAction::Rewind(5))),
-    //         "g" => {
-    //             if args.len() < 2 {
-    //                 continue;
-    //             }
-    //             let num = exit_on_error!(args[1].parse::<u64>());
-    //             exit_on_error!(tx.send(PlaybackAction::GoTo(num)))
-    //         }
-    //         _ => continue,
-    //     }
-    // }
-    // Ok(())
-}
-
-fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
-    let mut file_exporer = FileExplorer::new()?;
+    let mut file_exporer = FileExplorer::with_filter(vec!["opus".to_string()])?;
     loop {
         terminal.draw(|frame| frame.render_widget(&file_exporer.widget(), frame.area()))?;
 
