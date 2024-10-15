@@ -153,7 +153,13 @@ fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
             if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
                 return Ok(());
             }
+            if key.kind == KeyEventKind::Press && key.code == KeyCode::Char(' ') {
+                let _ = tx.send(PlaybackAction::PlayPause);
+            }
         }
-        file_exporer.handle(&event)?;
+        // PlaybackActions
+        if let Some(music_file) = file_exporer.handle(&event)? {
+            let _ = tx.send(PlaybackAction::Play(music_file.path().to_owned()));
+        };
     }
 }
