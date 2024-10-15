@@ -129,7 +129,8 @@ fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
     );
 
     // playback Daemon
-    let mut playback_daemon = PlaybackDaemon::default();
+    let mut playback_daemon = PlaybackDaemon::new(sample_rate.0 as usize);
+    playback_daemon.volume_level = 0.1;
 
     // Thread communication
     let (tx, rx) = mpsc::channel();

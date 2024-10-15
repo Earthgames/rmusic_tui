@@ -1,6 +1,8 @@
 [submodule "ratatui-explorer"]
 	path = ratatui-explorer
 	url = https://github.com/Earthgames/ratatui-explorer.git
+	branch = main
 [submodule "rmusic"]
 	path = rmusic
 	url = https://github.com/Earthgames/rmusic
+	branch = main
