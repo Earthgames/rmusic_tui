@@ -8,6 +8,8 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleRate, SupportedStreamConfig};
 use log::{error, LevelFilter};
 use ratatui::crossterm::terminal;
+use ratatui::layout::Layout;
+use ratatui::widgets::Tabs;
 use ratatui_explorer::FileExplorer;
 use rmusic::database::Library;
 use rmusic::playback_loop::playback_loop;
@@ -26,6 +28,7 @@ use ratatui::{
 };
 
 mod cli;
+mod ui;
 
 macro_rules! exit_on_error {
     ($expr:expr) => {
@@ -144,9 +147,9 @@ fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
         exit_on_error!(device.build_output_stream(&supported_config.into(), decoder, err_fn, None));
     exit_on_error!(stream.play());
 
-    let mut file_exporer = FileExplorer::with_filter(vec!["opus".to_string()])?;
+    let mut ui = ui::UI::new()?;
     loop {
-        terminal.draw(|frame| frame.render_widget(&file_exporer.widget(), frame.area()))?;
+        terminal.draw(|frame| frame.render_widget(ui, frame.area()))?;
 
         let event = event::read()?;
         if let event::Event::Key(key) = event {
@@ -158,8 +161,8 @@ fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
             }
         }
         // PlaybackActions
-        if let Some(music_file) = file_exporer.handle(&event)? {
-            let _ = tx.send(PlaybackAction::Play(music_file.path().to_owned()));
-        };
+        // if let Some(music_file) = file_exporer.handle(&event)? {
+        //     let _ = tx.send(PlaybackAction::Play(music_file.path().to_owned()));
+        // };
     }
 }
