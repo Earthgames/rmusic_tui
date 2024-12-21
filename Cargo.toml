@@ -14,5 +14,6 @@ clap = { version = "4.0", features = [
 simplelog = "0.12" # logging
 log = "0.4" # logging
 cpal = "0.15" # music output
-tokio = { version = "1", features = ["full"] } # async
+futures = "0.3" # async
 ratatui = "0.28"
+anyhow = "1.0"

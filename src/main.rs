@@ -18,6 +18,7 @@ use simplelog::TermLogger;
 use cli::Cli;
 use rmusic::playback::{PlaybackAction, PlaybackDaemon};
 
+use anyhow::Result;
 use std::io;
 
 use ratatui::{
@@ -42,8 +43,7 @@ macro_rules! exit_on_error {
     };
 }
 
-#[tokio::main]
-async fn main() -> io::Result<()> {
+fn main() -> Result<()> {
     let cli = Cli::parse();
     let mut log_config = simplelog::ConfigBuilder::new();
     let mut _quiet = false;
@@ -68,47 +68,14 @@ async fn main() -> io::Result<()> {
     )
     .unwrap();
 
-    //Database
-    // let database = Library::try_new().await.expect("No database");
-    //
-    // if cli.add_path {
-    //     database
-    //         .add_file(&PathBuf::from(&cli.opus_file))
-    //         .await
-    //         .expect("database problem");
-    // }
-
     let mut terminal = ratatui::init();
     terminal.clear()?;
     let app_result = run(terminal);
     ratatui::restore();
     app_result
-    // let mut command = "".to_string();
-    // let stdin = stdin();
-    // loop {
-    //     command.clear();
-    //     exit_on_error!(stdin.read_line(&mut command)); // Ignore all errors for now
-    //     let args: Vec<&str> = command.split_ascii_whitespace().collect();
-    //     match args[0] {
-    //         "q" => break,
-    //         "p" => exit_on_error!(tx.send(PlaybackAction::Playing)),
-    //         "s" => exit_on_error!(tx.send(PlaybackAction::Paused)),
-    //         "f" => exit_on_error!(tx.send(PlaybackAction::FastForward(5))),
-    //         "r" => exit_on_error!(tx.send(PlaybackAction::Rewind(5))),
-    //         "g" => {
-    //             if args.len() < 2 {
-    //                 continue;
-    //             }
-    //             let num = exit_on_error!(args[1].parse::<u64>());
-    //             exit_on_error!(tx.send(PlaybackAction::GoTo(num)))
-    //         }
-    //         _ => continue,
-    //     }
-    // }
-    // Ok(())
 }
 
-fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
+fn run(mut terminal: DefaultTerminal) -> Result<()> {
     // Audio output
     let host = cpal::default_host();
     let device = host
@@ -133,7 +100,7 @@ fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
 
     // playback Daemon
     let mut playback_daemon = PlaybackDaemon::new(sample_rate.0 as usize);
-    playback_daemon.volume_level = 0.1;
+    playback_daemon.volume_level = 0.2;
 
     // Thread communication
     let (tx, rx) = mpsc::channel();
@@ -147,9 +114,9 @@ fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
         exit_on_error!(device.build_output_stream(&supported_config.into(), decoder, err_fn, None));
     exit_on_error!(stream.play());
 
-    let mut ui = ui::UI::new()?;
+    let ui = ui::UI::new()?;
     loop {
-        terminal.draw(|frame| frame.render_widget(ui, frame.area()))?;
+        terminal.draw(|frame| frame.render_widget(&ui, frame.area()))?;
 
         let event = event::read()?;
         if let event::Event::Key(key) = event {
@@ -160,9 +127,5 @@ fn run(mut terminal: DefaultTerminal) -> io::Result<()> {
                 let _ = tx.send(PlaybackAction::PlayPause);
             }
         }
-        // PlaybackActions
-        // if let Some(music_file) = file_exporer.handle(&event)? {
-        //     let _ = tx.send(PlaybackAction::Play(music_file.path().to_owned()));
-        // };
     }
 }
