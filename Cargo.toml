@@ -5,7 +5,8 @@ edition = "2021"
 
 [dependencies]
 rmusic = {path = "rmusic"}
-ratatui-explorer = {path = "ratatui-explorer"} # file expore wigit
+ratatui-explorer = {path = "ratatui-explorer"} # file explore widget
+ratatui-eventInput = "0.1" 
 clap = { version = "4.0", features = [
     "derive",
     "cargo",
@@ -15,5 +16,5 @@ simplelog = "0.12" # logging
 log = "0.4" # logging
 cpal = "0.15" # music output
 futures = "0.3" # async
-ratatui = "0.28"
-anyhow = "1.0"
+ratatui = "0.28" # tui
+anyhow = "1.0" # errors

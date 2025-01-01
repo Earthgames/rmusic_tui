@@ -6,3 +6,7 @@
 	path = rmusic
 	url = https://github.com/Earthgames/rmusic
 	branch = main
+[submodule "ratatui-input"]
+	path = ratatui-input
+	url = https://github.com/Earthgames/ratatui-input
+    branch = main
