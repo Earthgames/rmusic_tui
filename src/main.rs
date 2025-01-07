@@ -1,30 +1,16 @@
-#![allow(dead_code, unused_imports)]
-use std::io::stdin;
-use std::path::PathBuf;
 use std::sync::mpsc;
 
-use clap::Parser;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleRate, SupportedStreamConfig};
-use log::{error, LevelFilter};
-use ratatui::crossterm::terminal;
-use ratatui::layout::Layout;
-use ratatui::widgets::Tabs;
-use ratatui_explorer::FileExplorer;
-use rmusic::database::Library;
+use log::error;
 use rmusic::playback_loop::playback_loop;
-use simplelog::TermLogger;
 
-use cli::Cli;
 use rmusic::playback::{PlaybackAction, PlaybackDaemon};
 
 use anyhow::Result;
-use std::io;
 
 use ratatui::{
     crossterm::event::{self, KeyCode, KeyEventKind},
-    style::Stylize,
-    widgets::Paragraph,
     DefaultTerminal,
 };
 
@@ -44,29 +30,7 @@ macro_rules! exit_on_error {
 }
 
 fn main() -> Result<()> {
-    let cli = Cli::parse();
-    let mut log_config = simplelog::ConfigBuilder::new();
     let mut _quiet = false;
-    TermLogger::init(
-        match cli.loglevel {
-            0 => {
-                _quiet = true;
-                LevelFilter::Off
-            }
-            1 => LevelFilter::Error,
-            2 => LevelFilter::Warn,
-            3 => LevelFilter::Info,
-            4 => LevelFilter::Debug,
-            _ => LevelFilter::Trace,
-        },
-        log_config
-            .set_time_level(LevelFilter::Warn)
-            .set_target_level(LevelFilter::Warn)
-            .build(),
-        simplelog::TerminalMode::Stdout,
-        simplelog::ColorChoice::Auto,
-    )
-    .unwrap();
 
     let mut terminal = ratatui::init();
     terminal.clear()?;
