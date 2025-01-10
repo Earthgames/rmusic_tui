@@ -78,7 +78,7 @@ fn run(mut terminal: DefaultTerminal) -> Result<()> {
         exit_on_error!(device.build_output_stream(&supported_config.into(), decoder, err_fn, None));
     exit_on_error!(stream.play());
 
-    let ui = ui::UI::new()?;
+    let mut ui = ui::UI::new()?;
     loop {
         terminal.draw(|frame| frame.render_widget(&ui, frame.area()))?;
 
@@ -91,5 +91,6 @@ fn run(mut terminal: DefaultTerminal) -> Result<()> {
                 let _ = tx.send(PlaybackAction::PlayPause);
             }
         }
+        ui.handle_input(&event)?;
     }
 }
