@@ -2,20 +2,20 @@ use anyhow::{Ok, Result};
 use futures::executor::block_on;
 use ratatui::{
     prelude::*,
-    widgets::{List, Tabs},
+    widgets::{List, ListState, Tabs},
 };
 use ratatui_eventInput::Input;
 use ratatui_explorer::FileExplorer;
-use rmusic::database::Library;
+use rmusic::database::{self, Library};
 use rmusic_tui::settings::input::Navigation;
 
-pub struct TabPages<'a> {
-    tab_pages: Vec<TabPage<'a>>,
+pub struct TabPages {
+    tab_pages: Vec<TabPage>,
     active_tab_index: usize,
 }
 
-impl<'a> TabPages<'a> {
-    pub fn new(tab_pages: Vec<TabPage<'a>>, library: &Library) -> Result<TabPages<'a>> {
+impl TabPages {
+    pub fn new(tab_pages: Vec<TabPage>, library: &Library) -> Result<TabPages> {
         let mut tab_pages = TabPages {
             tab_pages,
             active_tab_index: 0,
@@ -28,11 +28,11 @@ impl<'a> TabPages<'a> {
         self.tab_pages[self.active_tab_index].sync_with_database(library)
     }
 
-    pub fn active_tab_mut(&mut self) -> &mut TabPage<'a> {
+    pub fn active_tab_mut(&mut self) -> &mut TabPage {
         &mut self.tab_pages[self.active_tab_index]
     }
 
-    pub fn active_tab(&self) -> &TabPage<'a> {
+    pub fn active_tab(&self) -> &TabPage {
         &self.tab_pages[self.active_tab_index]
     }
 
@@ -65,12 +65,12 @@ impl<'a> TabPages<'a> {
     }
 }
 
-pub enum TabPage<'a> {
-    Artists(Artists<'a>),
+pub enum TabPage {
+    Artists(Artists),
     FileExplorer(FileExplorer),
 }
 
-impl TabPage<'_> {
+impl TabPage {
     pub fn tab_name(&self) -> &'static str {
         match self {
             TabPage::Artists(_) => "Artist",
@@ -83,36 +83,59 @@ impl TabPage<'_> {
             _ => Ok(()),
         }
     }
-    pub fn render(&self, rect: Rect, buffer: &mut Buffer) {
+    pub fn render(&mut self, rect: Rect, buffer: &mut Buffer, theme: &ratatui_explorer::Theme) {
         match self {
-            TabPage::Artists(artists) => artists.render(rect, buffer),
+            TabPage::Artists(artists) => artists.render(rect, buffer, theme),
             TabPage::FileExplorer(file_explorer) => file_explorer.widget().render(rect, buffer),
         }
     }
 }
 
 #[derive(Clone)]
-pub struct Artists<'a> {
-    list: List<'a>,
+pub struct Artists {
+    list_state: ListState,
+    list: Vec<database::Artist>,
 }
 
-impl<'a> Artists<'a> {
-    pub fn new() -> Artists<'a> {
+impl Artists {
+    pub fn new() -> Artists {
         Artists {
-            list: List::new(Vec::<String>::new()),
+            list_state: ListState::default(),
+            list: vec![],
+        }
+    }
+
+    pub fn handle_input<I>(&mut self, input: I, input_map: &Navigation)
+    where
+        I: Into<Input>,
+    {
+        let input: Input = input.into();
+        if input_map.list_down.contains(&input) {
+            self.list_state.scroll_down_by(1);
+        } else if input_map.list_up.contains(&input) {
+            self.list_state.scroll_up_by(1);
         }
     }
 
     pub fn sync_with_database(&mut self, library: &Library) -> Result<()> {
-        let artists = block_on(library.artists())?
-            .into_iter()
-            .map(|x| x.name)
-            .collect::<Vec<_>>();
-        self.list = List::new(artists);
+        self.list = block_on(library.artists())?.into_iter().collect::<Vec<_>>();
         Ok(())
     }
 
-    pub fn render(&self, rect: Rect, buffer: &mut Buffer) {
-        Widget::render(&self.list, rect, buffer)
+    pub fn render(&mut self, rect: Rect, buffer: &mut Buffer, theme: &ratatui_explorer::Theme) {
+        let highlight_style = theme.highlight_item_style();
+
+        let mut widget_list = List::new(self.list.iter().map(|x| x.name.as_str()))
+            .style(*theme.style())
+            .highlight_spacing(theme.highlight_spacing().clone())
+            .highlight_style(*highlight_style)
+            .highlight_symbol(theme.highlight_symbol().unwrap_or_default())
+            // TODO: make option of padding
+            .scroll_padding(3);
+
+        if let Some(block) = theme.block() {
+            widget_list = widget_list.block(block.clone());
+        }
+        StatefulWidget::render(widget_list, rect, buffer, &mut self.list_state)
     }
 }

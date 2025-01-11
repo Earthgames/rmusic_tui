@@ -4,21 +4,23 @@ use anyhow::{Ok, Result};
 use futures::executor::block_on;
 use ratatui::{layout::Layout, prelude::*};
 use ratatui_eventInput::Input;
-use ratatui_explorer::FileExplorer;
+use ratatui_explorer::{FileExplorer, Theme};
 use rmusic::database::Library;
 use rmusic_tui::settings::input::{InputMap, Navigation};
 use tabs::{Artists, TabPage, TabPages};
 
 mod tabs;
+mod theme;
 
-pub struct UI<'a> {
-    tab_pages: TabPages<'a>,
+pub struct UI {
+    tab_pages: TabPages,
     main_layout: Layout,
     library: Library,
     input_map: InputMap,
+    theme: ratatui_explorer::Theme,
 }
 
-impl<'a> UI<'a> {
+impl UI {
     pub fn new() -> Result<Self> {
         let input_map = InputMap {
             navigation: Navigation::default(),
@@ -27,7 +29,7 @@ impl<'a> UI<'a> {
         let artist_tab = Artists::new();
 
         let mut file_exporer = FileExplorer::with_keymap((&input_map).into())?;
-        file_exporer.set_filter(vec!["opus".to_string()])?;
+        // file_exporer.set_filter(vec!["opus".to_string()])?;
 
         let main_layout = Layout::new(
             ratatui::layout::Direction::Vertical,
@@ -47,6 +49,7 @@ impl<'a> UI<'a> {
             main_layout,
             library,
             input_map,
+            theme: Theme::default(),
         })
     }
 
@@ -57,7 +60,7 @@ impl<'a> UI<'a> {
         let input: Input = input.into();
         // State input
         match &mut self.tab_pages.active_tab_mut() {
-            TabPage::Artists(_) => (), // TODO: do something
+            TabPage::Artists(artists) => artists.handle_input(input, &self.input_map.navigation), // TODO: do something
             TabPage::FileExplorer(file_explorer) => {
                 if let Some(file) = file_explorer.handle(input)? {
                     block_on(self.library.add_file(file.path()))?;
@@ -71,7 +74,7 @@ impl<'a> UI<'a> {
     }
 }
 
-impl<'a> Widget for &UI<'a> {
+impl Widget for &mut UI {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
         Self: Sized,
@@ -79,6 +82,8 @@ impl<'a> Widget for &UI<'a> {
         let rects = self.main_layout.split(area);
         self.tab_pages.widget().render(rects[0], buf);
         let mainrect = rects[1];
-        self.tab_pages.active_tab().render(mainrect, buf);
+        self.tab_pages
+            .active_tab_mut()
+            .render(mainrect, buf, &self.theme);
     }
 }

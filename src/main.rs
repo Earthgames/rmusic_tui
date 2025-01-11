@@ -80,7 +80,7 @@ fn run(mut terminal: DefaultTerminal) -> Result<()> {
 
     let mut ui = ui::UI::new()?;
     loop {
-        terminal.draw(|frame| frame.render_widget(&ui, frame.area()))?;
+        terminal.draw(|frame| frame.render_widget(&mut ui, frame.area()))?;
 
         let event = event::read()?;
         if let event::Event::Key(key) = event {
