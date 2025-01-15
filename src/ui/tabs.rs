@@ -6,7 +6,7 @@ use ratatui::{
 };
 use ratatui_eventInput::Input;
 use ratatui_explorer::FileExplorer;
-use rmusic::database::{self, Library};
+use rmusic::database::{self, artist, Library};
 use rmusic_tui::settings::input::Navigation;
 
 pub struct TabPages {
@@ -118,7 +118,9 @@ impl Artists {
     }
 
     pub fn sync_with_database(&mut self, library: &Library) -> Result<()> {
-        self.list = block_on(library.artists())?.into_iter().collect::<Vec<_>>();
+        self.list = block_on(library.find_all::<artist::Entity>())?
+            .into_iter()
+            .collect::<Vec<_>>();
         Ok(())
     }
 

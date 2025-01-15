@@ -28,7 +28,7 @@ impl UI {
 
         let artist_tab = Artists::new();
 
-        let mut file_exporer = FileExplorer::with_keymap((&input_map).into())?;
+        let file_exporer = FileExplorer::with_keymap((&input_map).into())?;
         // file_exporer.set_filter(vec!["opus".to_string()])?;
 
         let main_layout = Layout::new(
@@ -60,7 +60,7 @@ impl UI {
         let input: Input = input.into();
         // State input
         match &mut self.tab_pages.active_tab_mut() {
-            TabPage::Artists(artists) => artists.handle_input(input, &self.input_map.navigation), // TODO: do something
+            TabPage::Artists(artists) => artists.handle_input(input, &self.input_map.navigation),
             TabPage::FileExplorer(file_explorer) => {
                 if let Some(file) = file_explorer.handle(input)? {
                     block_on(self.library.add_file(file.path()))?;
