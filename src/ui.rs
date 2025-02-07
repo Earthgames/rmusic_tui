@@ -2,6 +2,7 @@ use std::default::Default;
 
 use anyhow::{Ok, Result};
 use futures::executor::block_on;
+use library_view::LibraryViewer;
 use ratatui::{layout::Layout, prelude::*};
 use ratatui_eventInput::Input;
 use ratatui_explorer::{FileExplorer, Theme};
@@ -9,18 +10,19 @@ use rmusic::database::Library;
 use rmusic_tui::settings::input::{InputMap, Navigation};
 use tabs::{Artists, TabPage, TabPages};
 
+mod library_view;
 mod tabs;
 mod theme;
 
-pub struct UI {
-    tab_pages: TabPages,
+pub struct UI<'a> {
+    tab_pages: TabPages<'a>,
     main_layout: Layout,
     library: Library,
     input_map: InputMap,
     theme: ratatui_explorer::Theme,
 }
 
-impl UI {
+impl UI<'_> {
     pub fn new() -> Result<Self> {
         let input_map = InputMap {
             navigation: Navigation::default(),
@@ -39,7 +41,8 @@ impl UI {
         let library = block_on(Library::try_new())?;
 
         let tab_pages = vec![
-            TabPage::Artists(artist_tab),
+            // TabPage::Artists(artist_tab),
+            TabPage::LibraryView(LibraryViewer::new(&library)?),
             TabPage::FileExplorer(file_exporer),
         ];
         let tab_pages = TabPages::new(tab_pages, &library)?;
@@ -66,6 +69,9 @@ impl UI {
                     block_on(self.library.add_file(file.path()))?;
                 }
             }
+            TabPage::LibraryView(library_view) => {
+                library_view.handle_input(input, &self.input_map.navigation)
+            }
         }
         // General input
         self.tab_pages
@@ -74,7 +80,7 @@ impl UI {
     }
 }
 
-impl Widget for &mut UI {
+impl Widget for &mut UI<'_> {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
         Self: Sized,

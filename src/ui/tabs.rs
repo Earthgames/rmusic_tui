@@ -6,16 +6,18 @@ use ratatui::{
 };
 use ratatui_eventInput::Input;
 use ratatui_explorer::FileExplorer;
-use rmusic::database::{self, artist, Library};
+use rmusic::database::{self, artist, release, track, Library};
 use rmusic_tui::settings::input::Navigation;
 
-pub struct TabPages {
-    tab_pages: Vec<TabPage>,
+use super::library_view::LibraryViewer;
+
+pub struct TabPages<'a> {
+    tab_pages: Vec<TabPage<'a>>,
     active_tab_index: usize,
 }
 
-impl TabPages {
-    pub fn new(tab_pages: Vec<TabPage>, library: &Library) -> Result<TabPages> {
+impl<'a> TabPages<'a> {
+    pub fn new(tab_pages: Vec<TabPage<'a>>, library: &Library) -> Result<TabPages<'a>> {
         let mut tab_pages = TabPages {
             tab_pages,
             active_tab_index: 0,
@@ -28,7 +30,7 @@ impl TabPages {
         self.tab_pages[self.active_tab_index].sync_with_database(library)
     }
 
-    pub fn active_tab_mut(&mut self) -> &mut TabPage {
+    pub fn active_tab_mut(&mut self) -> &mut TabPage<'a> {
         &mut self.tab_pages[self.active_tab_index]
     }
 
@@ -65,16 +67,18 @@ impl TabPages {
     }
 }
 
-pub enum TabPage {
+pub enum TabPage<'a> {
     Artists(Artists),
     FileExplorer(FileExplorer),
+    LibraryView(LibraryViewer<'a, artist::Model, release::Model, track::Model>),
 }
 
-impl TabPage {
+impl TabPage<'_> {
     pub fn tab_name(&self) -> &'static str {
         match self {
             TabPage::Artists(_) => "Artist",
             TabPage::FileExplorer(_) => "Files",
+            TabPage::LibraryView(_) => "LibraryView",
         }
     }
     pub fn sync_with_database(&mut self, library: &Library) -> Result<()> {
@@ -87,6 +91,7 @@ impl TabPage {
         match self {
             TabPage::Artists(artists) => artists.render(rect, buffer, theme),
             TabPage::FileExplorer(file_explorer) => file_explorer.widget().render(rect, buffer),
+            TabPage::LibraryView(library_viewer) => library_viewer.render(rect, buffer, theme),
         }
     }
 }

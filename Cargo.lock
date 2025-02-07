@@ -2629,6 +2629,7 @@ dependencies = [
  "ratatui-eventInput",
  "ratatui-explorer",
  "rmusic",
+ "sea-orm",
  "simplelog",
 ]
 

@@ -18,3 +18,4 @@ cpal = "0.15" # music output
 futures = "0.3" # async
 ratatui = "0.28" # tui
 anyhow = "1.0" # errors
+sea-orm = { version = "1.0"}
