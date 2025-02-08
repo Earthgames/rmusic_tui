@@ -16,7 +16,6 @@ mod theme;
 
 pub struct UI<'a> {
     tab_pages: TabPages<'a>,
-    main_layout: Layout,
     library: Library,
     input_map: InputMap,
     theme: ratatui_explorer::Theme,
@@ -33,11 +32,6 @@ impl UI<'_> {
         let file_exporer = FileExplorer::with_keymap((&input_map).into())?;
         // file_exporer.set_filter(vec!["opus".to_string()])?;
 
-        let main_layout = Layout::new(
-            ratatui::layout::Direction::Vertical,
-            vec![Constraint::Length(2), Constraint::Fill(1)],
-        );
-
         let library = block_on(Library::try_new())?;
 
         let tab_pages = vec![
@@ -49,11 +43,17 @@ impl UI<'_> {
 
         Ok(Self {
             tab_pages,
-            main_layout,
             library,
             input_map,
             theme: Theme::default(),
         })
+    }
+
+    fn layout() -> Layout {
+        Layout::new(
+            ratatui::layout::Direction::Vertical,
+            vec![Constraint::Length(2), Constraint::Fill(1)],
+        )
     }
 
     pub fn handle_input<I>(&mut self, input: I) -> Result<()>
@@ -85,7 +85,7 @@ impl Widget for &mut UI<'_> {
     where
         Self: Sized,
     {
-        let rects = self.main_layout.split(area);
+        let rects = UI::layout().split(area);
         self.tab_pages.widget().render(rects[0], buf);
         let mainrect = rects[1];
         self.tab_pages
