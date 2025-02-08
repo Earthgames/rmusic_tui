@@ -70,7 +70,7 @@ impl UI<'_> {
                 }
             }
             TabPage::LibraryView(library_view) => {
-                library_view.handle_input(input, &self.input_map.navigation)
+                library_view.handle_input(input, &self.input_map.navigation, &self.library)?
             }
         }
         // General input
