@@ -1,4 +1,5 @@
 use std::sync::mpsc;
+use std::time::Duration;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleRate, SupportedStreamConfig};
@@ -16,6 +17,10 @@ use ratatui::{
 
 mod cli;
 mod ui;
+
+const FRAMERATE: u64 = 144;
+/// milliseconds per frame
+const MILL_FPS: u64 = 1 / (FRAMERATE * 1000);
 
 macro_rules! exit_on_error {
     ($expr:expr) => {
@@ -82,15 +87,21 @@ fn run(mut terminal: DefaultTerminal) -> Result<()> {
     loop {
         terminal.draw(|frame| frame.render_widget(&mut ui, frame.area()))?;
 
-        let event = event::read()?;
-        if let event::Event::Key(key) = event {
-            if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                return Ok(());
-            }
-            if key.kind == KeyEventKind::Press && key.code == KeyCode::Char(' ') {
-                let _ = tx.send(PlaybackAction::PlayPause);
+        // Check if we have to handle input
+        if event::poll(Duration::from_millis(MILL_FPS))? {
+            // Handel all input in this frame, not just one
+            while event::poll(Duration::from_secs(0))? {
+                let event = event::read()?;
+                if let event::Event::Key(key) = event {
+                    if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                        return Ok(());
+                    }
+                    if key.kind == KeyEventKind::Press && key.code == KeyCode::Char(' ') {
+                        let _ = tx.send(PlaybackAction::PlayPause);
+                    }
+                }
+                ui.handle_input(&event)?;
             }
         }
-        ui.handle_input(&event)?;
     }
 }
