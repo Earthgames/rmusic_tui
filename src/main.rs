@@ -94,6 +94,9 @@ fn run(mut terminal: DefaultTerminal) -> Result<()> {
     // Thread communication
     let (tx, rx) = mpsc::channel();
 
+    // ui
+    let mut ui = ui::UI::new(playback_daemon.get_arc_queue())?;
+
     // Stream setup
     let err_fn = |err| error!("an error occurred on the output audio stream: {}", err);
     let decoder = move |data: &mut [f32], callback: &_| {

@@ -1,13 +1,21 @@
-use std::default::Default;
+use std::{
+    default::Default,
+    sync::{Arc, Mutex},
+};
 
 use anyhow::{Ok, Result};
 use futures::executor::block_on;
 use library_view::LibraryViewer;
+use log::error;
 use ratatui::{layout::Layout, prelude::*};
 use ratatui_eventInput::Input;
 use ratatui_explorer::{FileExplorer, Theme};
-use rmusic::database::Library;
-use rmusic_tui::settings::input::{InputMap, Navigation};
+use rmusic::{
+    database::Library,
+    playback_loop::PlaybackAction,
+    queue::{Queue, QueueItem},
+};
+use rmusic_tui::settings::input::{InputMap, Media, Navigation};
 use tabs::{input_to_log_event, QueueView, TabPage, TabPages};
 
 mod library_view;
@@ -39,6 +47,7 @@ impl UI {
             // TabPage::Artists(artist_tab),
             TabPage::LibraryView(LibraryViewer::new(&library)?),
             TabPage::FileExplorer(file_exporer),
+            TabPage::Queue(QueueView::new(queue.clone())),
             TabPage::TuiLogger(
                 tui_logger::TuiWidgetState::new().set_default_display_level(log::LevelFilter::Warn),
             ),

@@ -1,12 +1,16 @@
+use std::sync::{Arc, Mutex};
+
 use anyhow::{Ok, Result};
 use futures::executor::block_on;
+use ratatui::widgets::Widget;
 use ratatui::{
     prelude::*,
     widgets::{List, ListState, Tabs},
 };
-use ratatui_eventInput::Input;
+use ratatui_eventInput::{Input, Key};
 use ratatui_explorer::FileExplorer;
 use rmusic::database::{self, artist, release, track, Library};
+use rmusic::queue::{Queue, QueueItem};
 use rmusic_tui::settings::input::Navigation;
 use tui_logger::*;
 
@@ -33,6 +37,10 @@ impl TabPages {
 
     pub fn active_tab_mut(&mut self) -> &mut TabPage {
         &mut self.tab_pages[self.active_tab_index]
+    }
+
+    pub fn add_tab(&mut self, tab_page: TabPage) {
+        self.tab_pages.push(tab_page);
     }
 
     pub fn active_tab(&self) -> &TabPage {
@@ -73,6 +81,7 @@ pub enum TabPage {
     FileExplorer(FileExplorer),
     LibraryView(LibraryViewer<artist::Model, release::Model, track::Model>),
     TuiLogger(TuiWidgetState),
+    Queue(QueueView),
 }
 
 impl TabPage {
@@ -82,6 +91,7 @@ impl TabPage {
             TabPage::FileExplorer(_) => "Files",
             TabPage::LibraryView(_) => "LibraryView",
             TabPage::TuiLogger(_) => "TuiLogger",
+            TabPage::Queue(_) => "Queue",
         }
     }
     pub fn sync_with_database(&mut self, library: &Library) -> Result<()> {
@@ -109,7 +119,48 @@ impl TabPage {
                 .output_line(true)
                 .state(tui_widget_state)
                 .render(rect, buffer),
+            TabPage::Queue(queue) => queue.render(rect, buffer),
         }
+    }
+}
+
+pub struct QueueView {
+    queue: Arc<Mutex<Queue>>,
+    list_state: ListState,
+}
+
+impl QueueView {
+    pub fn new(queue: Arc<Mutex<Queue>>) -> QueueView {
+        QueueView {
+            queue,
+            list_state: ListState::default(),
+        }
+    }
+
+    pub fn render(&mut self, rect: Rect, buffer: &mut Buffer) {
+        let queue = self.queue.lock().unwrap();
+        let list = List::new(queue.queue_items.iter().map(show_queue_item));
+        StatefulWidget::render(list, rect, buffer, &mut self.list_state);
+    }
+
+    pub fn handle_input<I>(&mut self, input: I, input_map: &Navigation)
+    where
+        I: Into<Input>,
+    {
+        let input: Input = input.into();
+        if input_map.list_down.contains(&input) {
+            self.list_state.scroll_down_by(1);
+        } else if input_map.list_up.contains(&input) {
+            self.list_state.scroll_up_by(1);
+        }
+    }
+}
+
+fn show_queue_item(item: &QueueItem) -> &str {
+    match item {
+        QueueItem::Track(path_buf, _) => path_buf.to_str().unwrap(),
+        QueueItem::PlayList(_, _) => "Playlist",
+        QueueItem::Album(_, _) => "Album",
     }
 }
 
