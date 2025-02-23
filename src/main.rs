@@ -9,7 +9,7 @@ use cpal::{SampleRate, SupportedStreamConfig};
 use log::error;
 use rmusic::playback_loop::playback_loop;
 
-use rmusic::playback::{PlaybackAction, PlaybackDaemon};
+use rmusic::playback::PlaybackDaemon;
 
 use anyhow::Result;
 
@@ -106,7 +106,6 @@ fn run(mut terminal: DefaultTerminal) -> Result<()> {
         exit_on_error!(device.build_output_stream(&supported_config.into(), decoder, err_fn, None));
     exit_on_error!(stream.play());
 
-    let mut ui = ui::UI::new()?;
     loop {
         terminal.draw(|frame| frame.render_widget(&mut ui, frame.area()))?;
 
@@ -119,11 +118,10 @@ fn run(mut terminal: DefaultTerminal) -> Result<()> {
                     if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
                         return Ok(());
                     }
-                    if key.kind == KeyEventKind::Press && key.code == KeyCode::Char(' ') {
-                        let _ = tx.send(PlaybackAction::PlayPause);
-                    }
                 }
-                ui.handle_input(&event)?;
+                if let Some(action) = ui.handle_input(&event)? {
+                    let _ = tx.send(action);
+                }
             }
         }
     }

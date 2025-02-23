@@ -34,6 +34,7 @@ impl UI {
     pub fn new(queue: Arc<Mutex<Queue>>) -> Result<Self> {
         let input_map = InputMap {
             navigation: Navigation::default(),
+            media: Media::default(),
         };
 
         // let artist_tab = Artists::new();
@@ -70,7 +71,7 @@ impl UI {
         )
     }
 
-    pub fn handle_input<I>(&mut self, input: I) -> Result<()>
+    pub fn handle_input<I>(&mut self, input: I) -> Result<Option<PlaybackAction>>
     where
         I: Into<Input>,
     {
@@ -82,7 +83,9 @@ impl UI {
             TabPage::Artists(artists) => artists.handle_input(input, navigation),
             TabPage::FileExplorer(file_explorer) => {
                 if let Some(file) = file_explorer.handle(input)? {
-                    block_on(self.library.add_file(file.path()))?;
+                    if let Err(err) = block_on(self.library.add_file(file.path())) {
+                        error!("error while adding file to library: {err}");
+                    }
                 }
             }
             TabPage::LibraryView(library_view) => {
@@ -101,11 +104,28 @@ impl UI {
                     tui_widget_state.transition(event);
                 }
             }
+            TabPage::Queue(queue_view) => queue_view.handle_input(input, navigation),
+        }
+        if playback_action.is_some() {
+            return Ok(playback_action);
         }
         // General input
+        let media = &self.input_map.media;
+        if media.playpause.contains(&input) {
+            playback_action = Some(PlaybackAction::PlayPause);
+        } else if media.volume_up.contains(&input) {
+            playback_action = Some(PlaybackAction::ChangeVolume(0.02))
+        } else if media.volume_down.contains(&input) {
+            playback_action = Some(PlaybackAction::ChangeVolume(-0.02))
+        }
+
+        if playback_action.is_some() {
+            return Ok(playback_action);
+        }
+
         self.tab_pages
             .handle_input(input, &self.input_map.navigation, &self.library)?;
-        Ok(())
+        Ok(playback_action)
     }
 }
 

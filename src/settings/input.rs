@@ -4,6 +4,27 @@ type Inputs = Vec<Input>;
 
 pub struct InputMap {
     pub navigation: Navigation,
+    pub media: Media,
+}
+
+pub struct Media {
+    pub playpause: Inputs,
+    pub volume_up: Inputs,
+    pub volume_down: Inputs,
+    pub queue_add: Inputs,
+    pub queue_set: Inputs,
+}
+
+impl Default for Media {
+    fn default() -> Self {
+        Self {
+            playpause: Input::keys(&[Key::Char('c'), Key::Char(' ')]),
+            volume_up: Input::keys(&[Key::Char('+'), Key::Char('=')]),
+            volume_down: Input::keys(&[Key::Char('-')]),
+            queue_add: Input::keys(&[Key::Char('a')]),
+            queue_set: Input::keys(&[Key::Char('p')]),
+        }
+    }
 }
 
 pub struct Navigation {
