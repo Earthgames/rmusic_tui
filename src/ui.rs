@@ -14,15 +14,16 @@ mod library_view;
 mod tabs;
 mod theme;
 
-pub struct UI<'a> {
-    tab_pages: TabPages<'a>,
+pub struct UI {
+    tab_pages: TabPages,
     library: Library,
     input_map: InputMap,
     theme: ratatui_explorer::Theme,
+    _queue: Arc<Mutex<Queue>>,
 }
 
-impl UI<'_> {
-    pub fn new() -> Result<Self> {
+impl UI {
+    pub fn new(queue: Arc<Mutex<Queue>>) -> Result<Self> {
         let input_map = InputMap {
             navigation: Navigation::default(),
         };
@@ -49,6 +50,7 @@ impl UI<'_> {
             library,
             input_map,
             theme: Theme::default(),
+            _queue: queue,
         })
     }
 
@@ -64,16 +66,26 @@ impl UI<'_> {
         I: Into<Input>,
     {
         let input: Input = input.into();
+        let mut playback_action: Option<PlaybackAction> = None;
+        let navigation = &self.input_map.navigation;
         // State input
         match &mut self.tab_pages.active_tab_mut() {
-            TabPage::Artists(artists) => artists.handle_input(input, &self.input_map.navigation),
+            TabPage::Artists(artists) => artists.handle_input(input, navigation),
             TabPage::FileExplorer(file_explorer) => {
                 if let Some(file) = file_explorer.handle(input)? {
                     block_on(self.library.add_file(file.path()))?;
                 }
             }
             TabPage::LibraryView(library_view) => {
-                library_view.handle_input(input, &self.input_map.navigation, &self.library)?
+                match library_view.handle_input(input, navigation, &self.library)? {
+                    library_view::Action::Play(queue_item) => {
+                        if let QueueItem::Track(track, _) = queue_item {
+                            playback_action =
+                                Some(PlaybackAction::Play(QueueItem::Track(track, false)));
+                        }
+                    }
+                    library_view::Action::None => (),
+                }
             }
             TabPage::TuiLogger(tui_widget_state) => {
                 if let Some(event) = input_to_log_event(input, navigation) {
@@ -88,7 +100,7 @@ impl UI<'_> {
     }
 }
 
-impl Widget for &mut UI<'_> {
+impl Widget for &mut UI {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
         Self: Sized,

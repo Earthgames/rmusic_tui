@@ -12,13 +12,13 @@ use tui_logger::*;
 
 use super::library_view::LibraryViewer;
 
-pub struct TabPages<'a> {
-    tab_pages: Vec<TabPage<'a>>,
+pub struct TabPages {
+    tab_pages: Vec<TabPage>,
     active_tab_index: usize,
 }
 
-impl<'a> TabPages<'a> {
-    pub fn new(tab_pages: Vec<TabPage<'a>>, library: &Library) -> Result<TabPages<'a>> {
+impl TabPages {
+    pub fn new(tab_pages: Vec<TabPage>, library: &Library) -> Result<TabPages> {
         let mut tab_pages = TabPages {
             tab_pages,
             active_tab_index: 0,
@@ -31,7 +31,7 @@ impl<'a> TabPages<'a> {
         self.tab_pages[self.active_tab_index].sync_with_database(library)
     }
 
-    pub fn active_tab_mut(&mut self) -> &mut TabPage<'a> {
+    pub fn active_tab_mut(&mut self) -> &mut TabPage {
         &mut self.tab_pages[self.active_tab_index]
     }
 
@@ -68,14 +68,14 @@ impl<'a> TabPages<'a> {
     }
 }
 
-pub enum TabPage<'a> {
+pub enum TabPage {
     Artists(Artists),
     FileExplorer(FileExplorer),
-    LibraryView(LibraryViewer<'a, artist::Model, release::Model, track::Model>),
+    LibraryView(LibraryViewer<artist::Model, release::Model, track::Model>),
     TuiLogger(TuiWidgetState),
 }
 
-impl TabPage<'_> {
+impl TabPage {
     pub fn tab_name(&self) -> &'static str {
         match self {
             TabPage::Artists(_) => "Artist",

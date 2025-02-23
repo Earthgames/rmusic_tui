@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, usize};
 
 use anyhow::Result;
 use futures::executor::block_on;
@@ -7,15 +7,18 @@ use ratatui::{
     widgets::{Cell, Row, Table, TableState},
 };
 use ratatui_eventInput::Input;
-use rmusic::database::{
-    artist,
-    library_view::{LibraryView, L1, L2, L3},
-    release, track, Library,
+use rmusic::{
+    database::{
+        artist,
+        library_view::{LibraryView, L1, L2, L3},
+        release, track, Library,
+    },
+    queue::QueueItem,
 };
 use rmusic_tui::settings::input::Navigation;
-use sea_orm::{ActiveEnum, ModelTrait};
+use sea_orm::ModelTrait;
 
-pub struct LibraryViewer<'a, A, B, C>
+pub struct LibraryViewer<A, B, C>
 where
     A: L1<B, C> + Sync,
     B: L2<C> + ModelTrait + Sync,
@@ -29,7 +32,6 @@ where
     table_state_l3: TableState,
     active_list: ActiveList,
     library_view: LibraryView<A, B, C>,
-    _lf: std::marker::PhantomData<&'a str>,
 }
 
 #[derive(PartialEq)]
@@ -39,7 +41,27 @@ enum ActiveList {
     Level3,
 }
 
-impl<A, B, C> LibraryViewer<'_, A, B, C>
+#[derive(PartialEq)]
+pub enum Action {
+    Play(QueueItem),
+    // Add to queue,
+    // Add to playlist,
+    None,
+}
+
+impl From<()> for Action {
+    fn from(_: ()) -> Self {
+        Self::None
+    }
+}
+
+impl From<QueueItem> for Action {
+    fn from(item: QueueItem) -> Self {
+        Self::Play(item)
+    }
+}
+
+impl<A, B, C> LibraryViewer<A, B, C>
 where
     A: L1<B, C> + Sync,
     B: L2<C> + ModelTrait + Sync,
@@ -57,7 +79,6 @@ where
             table_state_l3: TableState::default(),
             library_view: block_on(LibraryView::new(library))?,
             active_list: ActiveList::Level1,
-            _lf: std::marker::PhantomData,
         })
     }
 
@@ -66,64 +87,119 @@ where
         input: I,
         input_map: &Navigation,
         library: &Library,
-    ) -> Result<()>
+    ) -> Result<Action>
     where
         I: Into<Input>,
     {
         let active_table_state = self.active_list_state();
         let input: Input = input.into();
+
+        let mut action: Action = Action::None;
         if input_map.list_down.contains(&input) {
             active_table_state.scroll_down_by(1);
         } else if input_map.list_up.contains(&input) {
             active_table_state.scroll_up_by(1);
         } else if input_map.list_select.contains(&input) {
-            self.active_list = self.next_list_state();
+            if self.active_list == ActiveList::Level3 {
+                let index = self.index_l3();
+                action = block_on(self.library_view.get_context_l3(library, index))?.into()
+            } else {
+                self.active_list = self.next_list_state();
+            }
         } else if input_map.list_back.contains(&input) {
             self.active_list = self.previous_list_state();
-        }
+        };
 
         // check if library is empty
         let l1 = self.library_view.get_l1();
         if l1.is_empty() {
-            return Ok(());
+            return Ok(action);
         }
-        if let Some(i) = self.table_state_l1.selected() {
-            // make sure the index exists
-            let i = if i >= l1.len() { l1.len() - 1 } else { i };
-
-            block_on(self.library_view.sync_with_database_l2_item(library, i))?;
-            let l2 = self.library_view.get_l2(i);
-
-            if l2.is_empty() {
-                self.active_list = ActiveList::Level1;
-                return Ok(());
-            }
-
-            // again making sure that the index exists
-            let y = if let Some(index) = self.table_state_l2.selected() {
-                if index >= l2.len() {
-                    l2.len() - 1
-                } else {
-                    index
-                }
+        // make sure the index exists
+        fn check_index<T>(index: usize, vec: Vec<T>) -> usize {
+            if index >= vec.len() {
+                vec.len() - 1
             } else {
-                // if we have not selected anything we select something for the user
-                self.table_state_l2.select(Some(0));
-                0
-            };
-            block_on(
-                self.library_view
-                    .sync_with_database_l3_item(library, (i, y)),
-            )?;
-            let l3 = self.library_view.get_l3((i, y));
-            if !l3.is_empty() && self.table_state_l3.selected().is_none() {
-                // user will select something
-                self.table_state_l3.select(Some(0));
-            } else if l3.is_empty() && self.active_list == ActiveList::Level3 {
-                self.active_list = ActiveList::Level2;
+                index
             }
         }
-        Ok(())
+        let ind_l1 = if let Some(ind_l1) = self.table_state_l1.selected() {
+            check_index(ind_l1, l1)
+        } else {
+            // if we have not selected anything we select something for the user
+            self.table_state_l1.select(Some(0));
+            0
+        };
+
+        block_on(
+            self.library_view
+                .sync_with_database_l2_item(library, ind_l1),
+        )?;
+
+        let l2 = self.library_view.get_l2(ind_l1);
+        if l2.is_empty() {
+            self.active_list = ActiveList::Level1;
+            return Ok(action);
+        }
+
+        let ind_l2 = if let Some(ind_l2) = self.table_state_l2.selected() {
+            check_index(ind_l2, l2)
+        } else {
+            // user will select something
+            self.table_state_l2.select(Some(0));
+            0
+        };
+
+        block_on(
+            self.library_view
+                .sync_with_database_l3_item(library, (ind_l1, ind_l2)),
+        )?;
+
+        let l3 = self.library_view.get_l3((ind_l1, ind_l2));
+        if !l3.is_empty() && self.table_state_l3.selected().is_none() {
+            self.table_state_l3.select(Some(0));
+        } else if l3.is_empty() && self.active_list == ActiveList::Level3 {
+            self.active_list = ActiveList::Level2;
+        }
+
+        Ok(action)
+    }
+
+    fn index_l1(&mut self) -> usize {
+        match self.table_state_l1.selected() {
+            Some(index) => index,
+            None => {
+                // select 0 if nothing is selected
+                self.table_state_l1.select(Some(0));
+                0
+            }
+        }
+    }
+
+    fn index_l2(&mut self) -> (usize, usize) {
+        match self.table_state_l2.selected() {
+            Some(index) => (self.index_l1(), index),
+            None => {
+                // select 0 if nothing is selected
+                self.table_state_l2.select(Some(0));
+                (self.index_l1(), 0)
+            }
+        }
+    }
+
+    fn index_l3(&mut self) -> (usize, usize, usize) {
+        match self.table_state_l3.selected() {
+            Some(index) => {
+                let l2 = self.index_l2();
+                (l2.0, l2.1, index)
+            }
+            None => {
+                // select 0 if nothing is selected
+                self.table_state_l3.select(Some(0));
+                let l2 = self.index_l2();
+                (l2.0, l2.1, 0)
+            }
+        }
     }
 
     fn active_list_state(&mut self) -> &mut TableState {
@@ -230,7 +306,7 @@ impl Viewable for track::Model {
     }
 }
 
-impl<A, B, C> LibraryViewer<'_, A, B, C>
+impl<A, B, C> LibraryViewer<A, B, C>
 where
     A: L1<B, C> + Sync + Viewable,
     B: L2<C> + ModelTrait + Sync + Viewable,
@@ -249,7 +325,7 @@ where
             theme,
         );
         if self.active_list == ActiveList::Level1 {
-            l1 = l1.highlight_style(*theme.highlight_item_style());
+            l1 = l1.row_highlight_style(*theme.highlight_item_style());
         }
         StatefulWidget::render(l1, rects[0], buffer, &mut self.table_state_l1);
         if let Some(i) = self.table_state_l1.selected() {
@@ -261,7 +337,7 @@ where
                 theme,
             );
             if self.active_list == ActiveList::Level2 {
-                l2 = l2.highlight_style(*theme.highlight_item_style());
+                l2 = l2.row_highlight_style(*theme.highlight_item_style());
             }
             StatefulWidget::render(l2, rects[1], buffer, &mut self.table_state_l2);
             if let Some(y) = self.table_state_l2.selected() {
@@ -273,7 +349,7 @@ where
                     theme,
                 );
                 if self.active_list == ActiveList::Level3 {
-                    l3 = l3.highlight_style(*theme.highlight_item_style());
+                    l3 = l3.row_highlight_style(*theme.highlight_item_style());
                 }
                 StatefulWidget::render(l3, rects[2], buffer, &mut self.table_state_l3)
             }
