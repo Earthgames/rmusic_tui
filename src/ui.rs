@@ -8,7 +8,7 @@ use ratatui_eventInput::Input;
 use ratatui_explorer::{FileExplorer, Theme};
 use rmusic::database::Library;
 use rmusic_tui::settings::input::{InputMap, Navigation};
-use tabs::{Artists, TabPage, TabPages};
+use tabs::{input_to_log_event, QueueView, TabPage, TabPages};
 
 mod library_view;
 mod tabs;
@@ -27,7 +27,7 @@ impl UI<'_> {
             navigation: Navigation::default(),
         };
 
-        let artist_tab = Artists::new();
+        // let artist_tab = Artists::new();
 
         let file_exporer = FileExplorer::with_keymap((&input_map).into())?;
         // file_exporer.set_filter(vec!["opus".to_string()])?;
@@ -38,6 +38,9 @@ impl UI<'_> {
             // TabPage::Artists(artist_tab),
             TabPage::LibraryView(LibraryViewer::new(&library)?),
             TabPage::FileExplorer(file_exporer),
+            TabPage::TuiLogger(
+                tui_logger::TuiWidgetState::new().set_default_display_level(log::LevelFilter::Warn),
+            ),
         ];
         let tab_pages = TabPages::new(tab_pages, &library)?;
 
@@ -71,6 +74,11 @@ impl UI<'_> {
             }
             TabPage::LibraryView(library_view) => {
                 library_view.handle_input(input, &self.input_map.navigation, &self.library)?
+            }
+            TabPage::TuiLogger(tui_widget_state) => {
+                if let Some(event) = input_to_log_event(input, navigation) {
+                    tui_widget_state.transition(event);
+                }
             }
         }
         // General input

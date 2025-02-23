@@ -1,3 +1,6 @@
+#[cfg(not(debug_assertions))]
+use std::env;
+use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -13,6 +16,9 @@ use anyhow::Result;
 use ratatui::{
     crossterm::event::{self, KeyCode, KeyEventKind},
     DefaultTerminal,
+};
+use tui_logger::{
+    init_logger, set_default_level, set_log_file, TuiLoggerFile, TuiLoggerLevelOutput,
 };
 
 mod cli;
@@ -36,6 +42,20 @@ macro_rules! exit_on_error {
 
 fn main() -> Result<()> {
     let mut _quiet = false;
+    init_logger(log::LevelFilter::Trace)?;
+    set_default_level(log::LevelFilter::Trace);
+
+    #[cfg(debug_assertions)]
+    let mut cach_dir = PathBuf::from(".");
+    #[cfg(not(debug_assertions))]
+    let mut cach_dir = env::temp_dir();
+    cach_dir.push("rmusic-tui.log");
+
+    let file_options = TuiLoggerFile::new(cach_dir.to_str().unwrap())
+        .output_level(Some(TuiLoggerLevelOutput::Abbreviated))
+        .output_file(false)
+        .output_separator(':');
+    set_log_file(file_options);
 
     let mut terminal = ratatui::init();
     terminal.clear()?;
