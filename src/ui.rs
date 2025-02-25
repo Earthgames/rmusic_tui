@@ -85,8 +85,12 @@ impl UI {
             TabPage::Artists(artists) => artists.handle_input(input, navigation),
             TabPage::FileExplorer(file_explorer) => {
                 if let Some(file) = file_explorer.handle(input, navigation)? {
-                    if let Err(err) = block_on(self.library.add_file(file.path())) {
-                        error!("error while adding file to library: {err}");
+                    if file.is_dir() {
+                        if let Err(err) = block_on(self.library.add_folder_rec(file.path())) {
+                            error!("Error while adding folder to library: {err}");
+                        }
+                    } else if let Err(err) = block_on(self.library.add_file(file.path())) {
+                        error!("Error while adding file to library: {err}");
                     }
                 }
             }

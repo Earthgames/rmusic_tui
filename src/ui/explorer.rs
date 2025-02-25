@@ -113,6 +113,8 @@ impl FileExplorer {
             if self.selected >= self.files.len() {
                 self.selected = last_index;
             }
+        } else if key_map.item_add.contains(&input) {
+            return Ok(Some(self.current()));
         }
 
         Ok(None)
