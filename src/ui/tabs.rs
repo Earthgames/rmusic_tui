@@ -8,13 +8,14 @@ use ratatui::{
     widgets::{List, ListState, Tabs},
 };
 use ratatui_eventInput::{Input, Key};
-use ratatui_explorer::FileExplorer;
 use rmusic::database::{self, artist, release, track, Library};
 use rmusic::queue::{Queue, QueueItem};
 use rmusic_tui::settings::input::Navigation;
 use tui_logger::*;
 
 use super::library_view::LibraryViewer;
+use super::theme::Theme;
+use super::FileExplorer;
 
 pub struct TabPages {
     tab_pages: Vec<TabPage>,
@@ -100,7 +101,7 @@ impl TabPage {
             _ => Ok(()),
         }
     }
-    pub fn render(&mut self, rect: Rect, buffer: &mut Buffer, theme: &ratatui_explorer::Theme) {
+    pub fn render(&mut self, rect: Rect, buffer: &mut Buffer, theme: &Theme) {
         match self {
             TabPage::Artists(artists) => artists.render(rect, buffer, theme),
             TabPage::FileExplorer(file_explorer) => file_explorer.widget().render(rect, buffer),
@@ -197,7 +198,7 @@ impl Artists {
         Ok(())
     }
 
-    pub fn render(&mut self, rect: Rect, buffer: &mut Buffer, theme: &ratatui_explorer::Theme) {
+    pub fn render(&mut self, rect: Rect, buffer: &mut Buffer, theme: &Theme) {
         let highlight_style = theme.highlight_item_style();
 
         let mut widget_list = List::new(self.list.iter().map(|x| x.name.as_str()))

@@ -11,8 +11,6 @@ pub struct Media {
     pub playpause: Inputs,
     pub volume_up: Inputs,
     pub volume_down: Inputs,
-    pub queue_add: Inputs,
-    pub queue_set: Inputs,
 }
 
 impl Default for Media {
@@ -21,8 +19,6 @@ impl Default for Media {
             playpause: Input::keys(&[Key::Char('c'), Key::Char(' ')]),
             volume_up: Input::keys(&[Key::Char('+'), Key::Char('=')]),
             volume_down: Input::keys(&[Key::Char('-')]),
-            queue_add: Input::keys(&[Key::Char('a')]),
-            queue_set: Input::keys(&[Key::Char('p')]),
         }
     }
 }
@@ -34,7 +30,7 @@ pub struct Navigation {
     pub list_down: Inputs,
     /// Select/interact with the item selected in a list
     pub list_select: Inputs,
-    /// Go back to previous list  
+    /// Go back to previous list
     pub list_back: Inputs,
     /// Cancel the current action
     pub cancel: Inputs,
@@ -42,6 +38,12 @@ pub struct Navigation {
     pub tab_next: Inputs,
     /// Previous tab
     pub tab_previus: Inputs,
+    /// (un)Hide hidden files
+    pub hide_toggle: Inputs,
+    /// Add an item to the queue or library depending on the context
+    pub item_add: Inputs,
+    /// Select an individual item, depends on the context what it does.
+    pub item_set: Inputs,
 }
 
 impl Default for Navigation {
@@ -57,18 +59,9 @@ impl Default for Navigation {
                 Input::new_key(Key::BackTab),
                 Input::new(Key::Tab, Modifier::Shift(Side::Any)),
             ],
-        }
-    }
-}
-
-impl From<&InputMap> for ratatui_explorer::KeyMap {
-    fn from(value: &InputMap) -> Self {
-        ratatui_explorer::KeyMap {
-            list_up: value.navigation.list_up.clone(),
-            list_down: value.navigation.list_down.clone(),
-            folder_enter: value.navigation.list_select.clone(),
-            folder_exit: value.navigation.list_back.clone(),
-            hide_toggle: Default::default(), // TODO: change later
+            hide_toggle: Input::keys(&[Key::Char('H')]),
+            item_add: Input::keys(&[Key::Char('a')]),
+            item_set: Input::keys(&[Key::Char('p')]),
         }
     }
 }

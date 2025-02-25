@@ -1,4 +1,4 @@
-use std::{time::Duration, usize};
+use std::time::Duration;
 
 use anyhow::Result;
 use futures::executor::block_on;
@@ -17,6 +17,8 @@ use rmusic::{
 };
 use rmusic_tui::settings::input::Navigation;
 use sea_orm::ModelTrait;
+
+use super::theme::Theme;
 
 pub struct LibraryViewer<A, B, C>
 where
@@ -242,7 +244,7 @@ where
         )
     }
 
-    fn style<'a>(table: Table<'a>, theme: &'a ratatui_explorer::Theme) -> Table<'a> {
+    fn style<'a>(table: Table<'a>, theme: &'a Theme) -> Table<'a> {
         let mut table = table
             .style(*theme.style())
             .highlight_spacing(theme.highlight_spacing().clone())
@@ -315,7 +317,7 @@ where
         rmusic::database::library_view::IntoFR<C>,
     <B as sea_orm::ModelTrait>::Entity: sea_orm::Related<<C as sea_orm::ModelTrait>::Entity>,
 {
-    pub fn render(&mut self, area: Rect, buffer: &mut Buffer, theme: &ratatui_explorer::Theme) {
+    pub fn render(&mut self, area: Rect, buffer: &mut Buffer, theme: &Theme) {
         let rects = Self::layout().split(area);
         let mut l1 = Self::style(
             Table::new(

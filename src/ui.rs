@@ -4,12 +4,12 @@ use std::{
 };
 
 use anyhow::{Ok, Result};
+use explorer::file_explorer::FileExplorer;
 use futures::executor::block_on;
 use library_view::LibraryViewer;
 use log::error;
 use ratatui::{layout::Layout, prelude::*};
 use ratatui_eventInput::Input;
-use ratatui_explorer::{FileExplorer, Theme};
 use rmusic::{
     database::Library,
     playback_loop::PlaybackAction,
@@ -17,7 +17,9 @@ use rmusic::{
 };
 use rmusic_tui::settings::input::{InputMap, Media, Navigation};
 use tabs::{input_to_log_event, QueueView, TabPage, TabPages};
+use theme::Theme;
 
+mod explorer;
 mod library_view;
 mod tabs;
 mod theme;
@@ -26,7 +28,7 @@ pub struct UI {
     tab_pages: TabPages,
     library: Library,
     input_map: InputMap,
-    theme: ratatui_explorer::Theme,
+    theme: Theme,
     _queue: Arc<Mutex<Queue>>,
 }
 
@@ -39,7 +41,7 @@ impl UI {
 
         // let artist_tab = Artists::new();
 
-        let file_exporer = FileExplorer::with_keymap((&input_map).into())?;
+        let file_exporer = FileExplorer::new()?;
         // file_exporer.set_filter(vec!["opus".to_string()])?;
 
         let library = block_on(Library::try_new())?;
@@ -82,7 +84,7 @@ impl UI {
         match &mut self.tab_pages.active_tab_mut() {
             TabPage::Artists(artists) => artists.handle_input(input, navigation),
             TabPage::FileExplorer(file_explorer) => {
-                if let Some(file) = file_explorer.handle(input)? {
+                if let Some(file) = file_explorer.handle(input, navigation)? {
                     if let Err(err) = block_on(self.library.add_file(file.path())) {
                         error!("error while adding file to library: {err}");
                     }
