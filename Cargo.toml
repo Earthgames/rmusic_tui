@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 rmusic = { path = "rmusic" } # music player lib
-ratatui-explorer = { path = "ratatui-explorer" } # file explore widget
 ratatui-eventInput = "0.2" # input unification
 clap = { version = "4.0", features = [
     "derive",
@@ -17,6 +16,6 @@ tui-logger = "0.14" # logging
 log = "0.4" # logging
 cpal = "0.15" # music output
 futures = "0.3" # async
-ratatui = "0.29" # tui
+ratatui = { version = "0.29", features = ["unstable-widget-ref"] } # tui
 anyhow = "1.0" # errors
 sea-orm = { version = "1.0" } # db

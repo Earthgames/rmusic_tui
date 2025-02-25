@@ -3,10 +3,10 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     text::{Span, Text},
-    widgets::{List, ListState, WidgetRef},
+    widgets::{List, ListState, StatefulWidgetRef, WidgetRef},
 };
 
-use super::file_explorer::{File, FileExplorer};
+use super::{File, FileExplorer};
 
 pub struct Renderer<'a>(pub(crate) &'a FileExplorer);
 
@@ -36,7 +36,7 @@ impl WidgetRef for Renderer<'_> {
             list = list.block(block.clone());
         }
 
-        ratatui::widgets::StatefulWidgetRef::render_ref(&list, area, buf, &mut state)
+        StatefulWidgetRef::render_ref(&list, area, buf, &mut state)
     }
 }
 

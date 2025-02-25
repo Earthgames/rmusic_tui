@@ -4,8 +4,10 @@ use ratatui::widgets::WidgetRef;
 use ratatui_eventInput::{Input, Key};
 use rmusic_tui::settings::input::Navigation;
 
-use super::widget::Renderer;
 use crate::ui::Theme;
+use widget::Renderer;
+
+mod widget;
 
 #[derive(Debug, Clone)]
 pub struct FileExplorer {
@@ -36,7 +38,6 @@ impl FileExplorer {
         Ok(file_explorer)
     }
 
-    #[inline]
     pub fn with_theme(theme: Theme) -> Result<FileExplorer> {
         let mut file_explorer = Self::new()?;
 
@@ -45,7 +46,6 @@ impl FileExplorer {
         Ok(file_explorer)
     }
 
-    #[inline]
     pub fn with_filter(filter: Vec<String>) -> Result<FileExplorer> {
         let mut file_explorer = Self::new()?;
 
@@ -55,7 +55,6 @@ impl FileExplorer {
         Ok(file_explorer)
     }
 
-    #[inline]
     pub const fn widget(&self) -> impl WidgetRef + '_ {
         Renderer(self)
     }
@@ -119,16 +118,6 @@ impl FileExplorer {
         Ok(None)
     }
 
-    #[inline]
-    pub fn set_cwd<P: Into<PathBuf>>(&mut self, cwd: P) -> Result<()> {
-        self.cwd = cwd.into();
-        self.get_and_set_files()?;
-        self.selected = 0;
-
-        Ok(())
-    }
-
-    #[inline]
     pub fn set_theme(&mut self, theme: Theme) {
         self.theme = theme;
     }
@@ -138,33 +127,18 @@ impl FileExplorer {
         self.get_and_set_files()
     }
 
-    #[inline]
-    pub fn set_selected_idx(&mut self, selected: usize) {
-        assert!(selected < self.files.len());
-        self.selected = selected;
-    }
-
-    #[inline]
     pub fn current(&self) -> &File {
         &self.files[self.selected]
     }
 
-    #[inline]
-    pub const fn cwd(&self) -> &PathBuf {
-        &self.cwd
-    }
-
-    #[inline]
     pub const fn files(&self) -> &Vec<File> {
         &self.files
     }
 
-    #[inline]
     pub const fn selected_idx(&self) -> usize {
         self.selected
     }
 
-    #[inline]
     pub const fn theme(&self) -> &Theme {
         &self.theme
     }
@@ -239,17 +213,14 @@ pub struct File {
 }
 
 impl File {
-    #[inline]
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    #[inline]
     pub const fn path(&self) -> &PathBuf {
         &self.path
     }
 
-    #[inline]
     pub const fn is_dir(&self) -> bool {
         self.is_dir
     }

@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::{Ok, Result};
-use explorer::file_explorer::FileExplorer;
+use explorer::FileExplorer;
 use futures::executor::block_on;
 use library_view::LibraryViewer;
 use log::error;
