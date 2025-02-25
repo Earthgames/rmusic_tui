@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 rmusic = { path = "rmusic" } # music player lib
 ratatui-explorer = { path = "ratatui-explorer" } # file explore widget
-ratatui-eventInput = "0.1" # input unification
+ratatui-eventInput = "0.2" # input unification
 clap = { version = "4.0", features = [
     "derive",
     "cargo",
