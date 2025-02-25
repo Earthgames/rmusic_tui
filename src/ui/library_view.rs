@@ -228,6 +228,7 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub fn sync_with_database(&mut self, library: &Library) -> Result<()> {
         block_on(self.library_view.sync_with_database_l1(library))?;
         Ok(())

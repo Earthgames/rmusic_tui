@@ -22,6 +22,7 @@ pub struct TabPages {
     active_tab_index: usize,
 }
 
+#[allow(dead_code)]
 impl TabPages {
     pub fn new(tab_pages: Vec<TabPage>, library: &Library) -> Result<TabPages> {
         let mut tab_pages = TabPages {
@@ -77,6 +78,7 @@ impl TabPages {
     }
 }
 
+#[allow(dead_code)]
 pub enum TabPage {
     Artists(Artists),
     FileExplorer(FileExplorer),
@@ -171,6 +173,7 @@ pub struct Artists {
     list: Vec<database::Artist>,
 }
 
+#[allow(dead_code)]
 impl Artists {
     pub fn new() -> Artists {
         Artists {
