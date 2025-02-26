@@ -42,7 +42,7 @@ macro_rules! exit_on_error {
 
 fn main() -> Result<()> {
     let mut _quiet = false;
-    init_logger(log::LevelFilter::Trace)?;
+    init_logger(log::LevelFilter::Debug)?;
     set_default_level(log::LevelFilter::Trace);
 
     #[cfg(debug_assertions)]
