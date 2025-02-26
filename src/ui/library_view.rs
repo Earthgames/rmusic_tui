@@ -104,12 +104,27 @@ where
         } else if input_map.list_select.contains(&input) {
             if self.active_list == ActiveList::Level3 {
                 let index = self.index_l3();
-                action = block_on(self.library_view.get_context_l3(library, index))?.into()
+                action = block_on(self.library_view.get_context_list_l3(library, index))?.into()
             } else {
                 self.active_list = self.next_list_state();
             }
         } else if input_map.list_back.contains(&input) {
             self.active_list = self.previous_list_state();
+        } else if input_map.item_set.contains(&input) {
+            match self.active_list {
+                ActiveList::Level1 => {
+                    let index = self.index_l1();
+                    action = block_on(self.library_view.get_context_l1(library, index))?.into()
+                }
+                ActiveList::Level2 => {
+                    let index = self.index_l2();
+                    action = block_on(self.library_view.get_context_l2(library, index))?.into()
+                }
+                ActiveList::Level3 => {
+                    let index = self.index_l3();
+                    action = block_on(self.library_view.get_context_l3(library, index))?.into()
+                }
+            }
         };
 
         // check if library is empty

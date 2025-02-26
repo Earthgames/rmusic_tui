@@ -10,11 +10,7 @@ use library_view::LibraryViewer;
 use log::error;
 use ratatui::{layout::Layout, prelude::*};
 use ratatui_eventInput::Input;
-use rmusic::{
-    database::Library,
-    playback_loop::PlaybackAction,
-    queue::{Queue, QueueItem},
-};
+use rmusic::{database::Library, playback_loop::PlaybackAction, queue::Queue};
 use rmusic_tui::settings::input::{InputMap, Media, Navigation};
 use tabs::{input_to_log_event, QueueView, TabPage, TabPages};
 use theme::Theme;
@@ -97,10 +93,7 @@ impl UI {
             TabPage::LibraryView(library_view) => {
                 match library_view.handle_input(input, navigation, &self.library)? {
                     library_view::Action::Play(queue_item) => {
-                        if let QueueItem::Track(track, _) = queue_item {
-                            playback_action =
-                                Some(PlaybackAction::Play(QueueItem::Track(track, false)));
-                        }
+                        playback_action = Some(PlaybackAction::Play(queue_item));
                     }
                     library_view::Action::None => (),
                 }
