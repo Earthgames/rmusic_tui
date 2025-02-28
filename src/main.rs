@@ -93,7 +93,7 @@ fn run() -> Result<()> {
     let mut ui = ui::UI::new(playback_daemon.get_arc_queue())?;
 
     // Stream setup
-    let err_fn = |err| error!("an error occurred on the output audio stream: {}", err);
+    let err_fn = |err| error!("an error occurred on the output audio stream: {:?}", err);
     let decoder = move |data: &mut [f32], callback: &_| {
         playback_loop(data, callback, &mut playback_daemon, &rx)
     };

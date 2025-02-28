@@ -92,7 +92,7 @@ impl UI {
                             }
                         });
                     } else if let Err(err) = block_on(self.library.add_file(file.path())) {
-                        error!("Error while adding file to library: {err}");
+                        error!("Error while adding file to library: {:?}", err);
                     }
                 }
             }
