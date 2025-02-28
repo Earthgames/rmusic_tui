@@ -115,7 +115,7 @@ impl TabPage {
                 .style_trace(Style::default().fg(Color::Magenta))
                 .style_info(Style::default().fg(Color::Cyan))
                 .output_separator(':')
-                .output_timestamp(Some("%H:%M:%S".to_string()))
+                .output_timestamp(Some("%H:%M:%S%.f6".to_string()))
                 .output_level(Some(TuiLoggerLevelOutput::Abbreviated))
                 .output_target(true)
                 .output_file(true)
