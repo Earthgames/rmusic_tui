@@ -13,10 +13,7 @@ use rmusic::playback::PlaybackDaemon;
 
 use anyhow::Result;
 
-use ratatui::{
-    crossterm::event::{self, KeyCode, KeyEventKind},
-    DefaultTerminal,
-};
+use ratatui::crossterm::event::{self, KeyCode, KeyEventKind};
 use tui_logger::{
     init_logger, set_default_level, set_log_file, TuiLoggerFile, TuiLoggerLevelOutput,
 };
@@ -57,14 +54,12 @@ fn main() -> Result<()> {
         .output_separator(':');
     set_log_file(file_options);
 
-    let mut terminal = ratatui::init();
-    terminal.clear()?;
-    let app_result = run(terminal);
+    let app_result = run();
     ratatui::restore();
     app_result
 }
 
-fn run(mut terminal: DefaultTerminal) -> Result<()> {
+fn run() -> Result<()> {
     // Audio output
     let host = cpal::default_host();
     let device = host
@@ -106,6 +101,8 @@ fn run(mut terminal: DefaultTerminal) -> Result<()> {
         exit_on_error!(device.build_output_stream(&supported_config.into(), decoder, err_fn, None));
     exit_on_error!(stream.play());
 
+    let mut terminal = ratatui::init();
+    terminal.clear()?;
     loop {
         terminal.draw(|frame| frame.render_widget(&mut ui, frame.area()))?;
 
