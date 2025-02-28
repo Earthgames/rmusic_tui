@@ -1,6 +1,7 @@
 use std::{
     default::Default,
     sync::{Arc, Mutex},
+    thread,
 };
 
 use anyhow::{Ok, Result};
@@ -82,9 +83,14 @@ impl UI {
             TabPage::FileExplorer(file_explorer) => {
                 if let Some(file) = file_explorer.handle(input, navigation)? {
                     if file.is_dir() {
-                        if let Err(err) = block_on(self.library.add_folder_rec(file.path())) {
-                            error!("Error while adding folder to library: {err}");
-                        }
+                        let progress = Arc::new(Mutex::new(0));
+                        let db = self.library.clone();
+                        let path = file.path().to_path_buf();
+                        thread::spawn(move || {
+                            if let Err(err) = block_on(db.add_folder_rec(&path, progress)) {
+                                error!("Error while adding folder to library: {:?}", err);
+                            }
+                        });
                     } else if let Err(err) = block_on(self.library.add_file(file.path())) {
                         error!("Error while adding file to library: {err}");
                     }
