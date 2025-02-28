@@ -44,6 +44,8 @@ pub struct Navigation {
     pub item_add: Inputs,
     /// Select an individual item, depends on the context what it does.
     pub item_set: Inputs,
+    /// Refresh view
+    pub refresh: Inputs,
 }
 
 impl Default for Navigation {
@@ -62,6 +64,7 @@ impl Default for Navigation {
             hide_toggle: Input::keys(&[Key::Char('H')]),
             item_add: Input::keys(&[Key::Char('a')]),
             item_set: Input::keys(&[Key::Char('p')]),
+            refresh: vec![Input::new(Key::Char('r'), Modifier::Control(Side::Any))],
         }
     }
 }

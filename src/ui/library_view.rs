@@ -75,11 +75,13 @@ where
     pub fn new(library: &Library) -> Result<Self> {
         let mut table_state_l1 = TableState::default();
         table_state_l1.select(Some(0));
+        let mut library_view = block_on(LibraryView::new(library))?;
+        block_on(library_view.sync_with_database_all(library))?;
         Ok(LibraryViewer {
             table_state_l1,
             table_state_l2: TableState::default(),
             table_state_l3: TableState::default(),
-            library_view: block_on(LibraryView::new(library))?,
+            library_view,
             active_list: ActiveList::Level1,
         })
     }
@@ -125,7 +127,9 @@ where
                     action = block_on(self.library_view.get_context_l3(library, index))?.into()
                 }
             }
-        };
+        } else if input_map.refresh.contains(&input) {
+            block_on(self.library_view.sync_with_database_all(library))?;
+        }
 
         // check if library is empty
         let l1 = self.library_view.get_l1();
