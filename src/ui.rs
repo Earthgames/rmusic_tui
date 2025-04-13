@@ -1,6 +1,7 @@
 use std::{
     default::Default,
-    sync::{Arc, Mutex},
+    f64,
+    sync::{atomic::AtomicU8, Arc},
     thread,
 };
 
@@ -9,9 +10,12 @@ use explorer::FileExplorer;
 use futures::executor::block_on;
 use library_view::LibraryViewer;
 use log::error;
-use ratatui::{layout::Layout, prelude::*};
+use ratatui::{layout::Layout, prelude::*, widgets::LineGauge};
 use ratatui_eventInput::Input;
-use rmusic::{database::Library, playback_loop::PlaybackAction, queue::Queue};
+use rmusic::{
+    database::Library, playback::playback_context::ArcPlaybackContext,
+    playback_loop::PlaybackAction, queue::Queue,
+};
 use rmusic_tui::settings::input::{InputMap, Media, Navigation};
 use tabs::{input_to_log_event, QueueView, TabPage, TabPages};
 use theme::Theme;
@@ -26,11 +30,11 @@ pub struct UI {
     library: Library,
     input_map: InputMap,
     theme: Theme,
-    _queue: Arc<Mutex<Queue>>,
+    playback_context: ArcPlaybackContext,
 }
 
 impl UI {
-    pub fn new(queue: Arc<Mutex<Queue>>) -> Result<Self> {
+    pub fn new(playback_context: ArcPlaybackContext) -> Result<Self> {
         let input_map = InputMap {
             navigation: Navigation::default(),
             media: Media::default(),
@@ -47,7 +51,7 @@ impl UI {
             // TabPage::Artists(artist_tab),
             TabPage::LibraryView(LibraryViewer::new(&library)?),
             TabPage::FileExplorer(file_exporer),
-            TabPage::Queue(QueueView::new(queue.clone())),
+            // TabPage::Queue(QueueView::new(queue.clone())),
             TabPage::TuiLogger(
                 tui_logger::TuiWidgetState::new().set_default_display_level(log::LevelFilter::Warn),
             ),
@@ -59,14 +63,18 @@ impl UI {
             library,
             input_map,
             theme: Theme::default(),
-            _queue: queue,
+            playback_context,
         })
     }
 
     fn layout() -> Layout {
         Layout::new(
             ratatui::layout::Direction::Vertical,
-            vec![Constraint::Length(2), Constraint::Fill(1)],
+            vec![
+                Constraint::Length(2),
+                Constraint::Fill(1),
+                Constraint::Length(1),
+            ],
         )
     }
 
@@ -83,11 +91,11 @@ impl UI {
             TabPage::FileExplorer(file_explorer) => {
                 if let Some(file) = file_explorer.handle(input, navigation)? {
                     if file.is_dir() {
-                        let progress = Arc::new(Mutex::new(0));
+                        let progress = Arc::new(AtomicU8::new(0));
                         let db = self.library.clone();
                         let path = file.path().to_path_buf();
                         thread::spawn(move || {
-                            if let Err(err) = block_on(db.add_folder_rec(&path, progress)) {
+                            if let Err(err) = block_on(db.add_folder_rec(&path, &progress)) {
                                 error!("Error while adding folder to library: {:?}", err);
                             }
                         });
@@ -145,5 +153,19 @@ impl Widget for &mut UI {
         self.tab_pages
             .active_tab_mut()
             .render(mainrect, buf, &self.theme);
+        let length = self.playback_context.length();
+        let left = self.playback_context.left();
+        let played = length - left;
+        LineGauge::default()
+            .ratio(if played == 0 {
+                0.0
+            } else {
+                played as f64 / length as f64
+            })
+            .filled_style(Style::new().white().bold())
+            .unfilled_style(Style::new().black())
+            //TODO: CHANGE this with `unfilled_char()` when going to 0.30
+            .line_set(symbols::line::THICK)
+            .render(rects[2], buf);
     }
 }

@@ -1815,16 +1815,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "magnum-opus"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff49ad2a7313ae476b292c1e1b6bf17ad0542fc1d24880d85d455d8547a3ecc2"
-dependencies = [
- "libc",
- "opusic-sys",
-]
-
-[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2090,10 +2080,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
-name = "opusic-sys"
-version = "0.3.6"
+name = "opusic-c"
+version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5eace752ce07a037241dba8f02c654799f051e431b27028056bcb480e83b54f5"
+checksum = "91b8825303ca8a55b9087d1e99e9cb5f4e4a9de00a7ff507f87a951a56d5323d"
+dependencies = [
+ "opusic-sys",
+]
+
+[[package]]
+name = "opusic-sys"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "879033efb5db4156bdec629cb6e87467d66d98b874978dbecf783fa4fe22ef98"
 dependencies = [
  "cmake",
  "libc",
@@ -2558,8 +2557,8 @@ dependencies = [
  "entity",
  "lofty",
  "log",
- "magnum-opus",
  "migration",
+ "opusic-c",
  "rand",
  "rubato",
  "sea-orm",
