@@ -130,6 +130,10 @@ impl UI {
             playback_action = Some(PlaybackAction::ChangeVolume(0.02))
         } else if media.volume_down.contains(&input) {
             playback_action = Some(PlaybackAction::ChangeVolume(-0.02))
+        } else if media.fast_forward.contains(&input) {
+            playback_action = Some(PlaybackAction::FastForward(5))
+        } else if media.rewind.contains(&input) {
+            playback_action = Some(PlaybackAction::Rewind(5))
         }
 
         if playback_action.is_some() {

@@ -11,6 +11,8 @@ pub struct Media {
     pub playpause: Inputs,
     pub volume_up: Inputs,
     pub volume_down: Inputs,
+    pub fast_forward: Inputs,
+    pub rewind: Inputs,
 }
 
 impl Default for Media {
@@ -19,6 +21,8 @@ impl Default for Media {
             playpause: Input::keys(&[Key::Char('c'), Key::Char(' ')]),
             volume_up: Input::keys(&[Key::Char('+'), Key::Char('=')]),
             volume_down: Input::keys(&[Key::Char('-')]),
+            fast_forward: Input::keys(&[Key::Char('m')]),
+            rewind: Input::keys(&[Key::Char('n')]),
         }
     }
 }
