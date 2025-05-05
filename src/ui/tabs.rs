@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use anyhow::{Ok, Result};
 use futures::executor::block_on;
 use ratatui::widgets::Widget;
@@ -9,7 +7,8 @@ use ratatui::{
 };
 use ratatui_eventInput::{Input, Key};
 use rmusic::database::{self, artist, release, track, Library};
-use rmusic::queue::{Queue, QueueItem};
+use rmusic::playback::playback_context::ArcPlaybackContext;
+use rmusic::queue::QueueItem;
 use rmusic_tui::settings::input::Navigation;
 use tui_logger::*;
 
@@ -103,7 +102,13 @@ impl TabPage {
             _ => Ok(()),
         }
     }
-    pub fn render(&mut self, rect: Rect, buffer: &mut Buffer, theme: &Theme) {
+    pub fn render(
+        &mut self,
+        rect: Rect,
+        buffer: &mut Buffer,
+        theme: &Theme,
+        playback_context: &ArcPlaybackContext,
+    ) {
         match self {
             TabPage::Artists(artists) => artists.render(rect, buffer, theme),
             TabPage::FileExplorer(file_explorer) => file_explorer.widget().render(rect, buffer),
@@ -122,27 +127,30 @@ impl TabPage {
                 .output_line(true)
                 .state(tui_widget_state)
                 .render(rect, buffer),
-            TabPage::Queue(queue) => queue.render(rect, buffer),
+            TabPage::Queue(queue) => queue.render(rect, buffer, playback_context),
         }
     }
 }
 
 pub struct QueueView {
-    queue: Arc<Mutex<Queue>>,
     list_state: ListState,
 }
 
 impl QueueView {
-    pub fn new(queue: Arc<Mutex<Queue>>) -> QueueView {
+    pub fn new() -> QueueView {
         QueueView {
-            queue,
             list_state: ListState::default(),
         }
     }
 
-    pub fn render(&mut self, rect: Rect, buffer: &mut Buffer) {
-        let queue = self.queue.lock().unwrap();
-        let list = List::new(queue.queue_items.iter().map(show_queue_item));
+    pub fn render(
+        &mut self,
+        rect: Rect,
+        buffer: &mut Buffer,
+        playback_context: &ArcPlaybackContext,
+    ) {
+        let queue = playback_context.queue.lock().unwrap();
+        let list = List::new(queue.queue_items().iter().map(show_queue_item));
         StatefulWidget::render(list, rect, buffer, &mut self.list_state);
     }
 
@@ -161,7 +169,7 @@ impl QueueView {
 
 fn show_queue_item(item: &QueueItem) -> &str {
     match item {
-        QueueItem::Track(path_buf, _) => path_buf.to_str().unwrap(),
+        QueueItem::Track(path_buf) => path_buf.to_str().unwrap(),
         QueueItem::PlayList(_, _) => "Playlist",
         QueueItem::Album(_, _) => "Album",
     }

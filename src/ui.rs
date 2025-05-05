@@ -14,7 +14,7 @@ use ratatui::{layout::Layout, prelude::*, widgets::LineGauge};
 use ratatui_eventInput::Input;
 use rmusic::{
     database::Library, playback::playback_context::ArcPlaybackContext,
-    playback_loop::PlaybackAction, queue::Queue,
+    playback_loop::PlaybackAction,
 };
 use rmusic_tui::settings::input::{InputMap, Media, Navigation};
 use tabs::{input_to_log_event, QueueView, TabPage, TabPages};
@@ -51,7 +51,7 @@ impl UI {
             // TabPage::Artists(artist_tab),
             TabPage::LibraryView(LibraryViewer::new(&library)?),
             TabPage::FileExplorer(file_exporer),
-            // TabPage::Queue(QueueView::new(queue.clone())),
+            TabPage::Queue(QueueView::new()),
             TabPage::TuiLogger(
                 tui_logger::TuiWidgetState::new().set_default_display_level(log::LevelFilter::Warn),
             ),
@@ -152,7 +152,7 @@ impl Widget for &mut UI {
         let mainrect = rects[1];
         self.tab_pages
             .active_tab_mut()
-            .render(mainrect, buf, &self.theme);
+            .render(mainrect, buf, &self.theme, &self.playback_context);
         let length = self.playback_context.length();
         let left = self.playback_context.left();
         let played = length - left;
