@@ -3,6 +3,7 @@ use std::{
     f64,
     sync::{atomic::AtomicU8, Arc},
     thread,
+    time::Duration,
 };
 
 use anyhow::{Ok, Result};
@@ -80,11 +81,7 @@ impl UI {
     fn layout_status_line() -> Layout {
         Layout::new(
             ratatui::layout::Direction::Horizontal,
-            vec![
-                Constraint::Length(10),
-                Constraint::Fill(1),
-                Constraint::Length(4),
-            ],
+            vec![Constraint::Fill(1), Constraint::Length(4)],
         )
     }
 
@@ -174,9 +171,25 @@ impl Widget for &mut UI {
 
         let length = self.playback_context.length();
         let left = self.playback_context.left();
+        let sample_rate = self.playback_context.sample_rate() as u64;
         let played = length - left;
 
-        Line::from(format!("{}", left)).render(line_rects[0], buf);
+        let label = if played == 0 || sample_rate == 0 {
+            "00:00/00:00 ".to_string()
+        } else {
+            // as microseconds
+            let time_per_sample = 1_000_000 / sample_rate;
+
+            let time_played = Duration::from_micros(time_per_sample * played);
+            let time_total = Duration::from_micros(time_per_sample * length);
+            format!(
+                "{}:{:02}/{}:{:02} ",
+                time_played.as_secs() / 60,
+                time_played.as_secs() % 60,
+                time_total.as_secs() / 60,
+                time_total.as_secs() % 60,
+            )
+        };
 
         LineGauge::default()
             .ratio(if played == 0 {
@@ -184,10 +197,11 @@ impl Widget for &mut UI {
             } else {
                 played as f64 / length as f64
             })
+            .label(label)
             .filled_style(Style::new().white().bold())
             .unfilled_style(Style::new().black())
-            //TODO: CHANGE this with `unfilled_char()` when going to 0.30
+            //INFO: CHANGE this with `unfilled_char()` when going to 0.30
             .line_set(symbols::line::THICK)
-            .render(line_rects[1], buf);
+            .render(line_rects[0], buf);
     }
 }
