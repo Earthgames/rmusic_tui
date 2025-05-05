@@ -77,6 +77,16 @@ impl UI {
             ],
         )
     }
+    fn layout_status_line() -> Layout {
+        Layout::new(
+            ratatui::layout::Direction::Horizontal,
+            vec![
+                Constraint::Length(10),
+                Constraint::Fill(1),
+                Constraint::Length(4),
+            ],
+        )
+    }
 
     pub fn handle_input<I>(&mut self, input: I) -> Result<Option<PlaybackAction>>
     where
@@ -152,14 +162,22 @@ impl Widget for &mut UI {
         Self: Sized,
     {
         let rects = UI::layout().split(area);
+
         self.tab_pages.widget().render(rects[0], buf);
         let mainrect = rects[1];
         self.tab_pages
             .active_tab_mut()
             .render(mainrect, buf, &self.theme, &self.playback_context);
+
+        // Status line
+        let line_rects = UI::layout_status_line().split(rects[2]);
+
         let length = self.playback_context.length();
         let left = self.playback_context.left();
         let played = length - left;
+
+        Line::from(format!("{}", left)).render(line_rects[0], buf);
+
         LineGauge::default()
             .ratio(if played == 0 {
                 0.0
@@ -170,6 +188,6 @@ impl Widget for &mut UI {
             .unfilled_style(Style::new().black())
             //TODO: CHANGE this with `unfilled_char()` when going to 0.30
             .line_set(symbols::line::THICK)
-            .render(rects[2], buf);
+            .render(line_rects[1], buf);
     }
 }
