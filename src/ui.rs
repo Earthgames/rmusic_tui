@@ -174,6 +174,7 @@ impl Widget for &mut UI {
         let sample_rate = self.playback_context.sample_rate() as u64;
         let played = length - left;
 
+        // Show time in min:sec and played/total
         let label = if played == 0 || sample_rate == 0 {
             "00:00/00:00 ".to_string()
         } else {
@@ -191,6 +192,7 @@ impl Widget for &mut UI {
             )
         };
 
+        // Play progress line
         LineGauge::default()
             .ratio(if played == 0 {
                 0.0
@@ -200,8 +202,11 @@ impl Widget for &mut UI {
             .label(label)
             .filled_style(Style::new().white().bold())
             .unfilled_style(Style::new().black())
-            //INFO: CHANGE this with `unfilled_char()` when going to 0.30
+            //INFO: CHANGE this with `unfilled_char()` when going to ratatui 0.30
             .line_set(symbols::line::THICK)
             .render(line_rects[0], buf);
+
+        // Volume level
+        Line::from(format!("{}", self.playback_context.volume_level())).render(line_rects[1], buf);
     }
 }
