@@ -68,23 +68,6 @@ impl UI {
         })
     }
 
-    fn layout() -> Layout {
-        Layout::new(
-            ratatui::layout::Direction::Vertical,
-            vec![
-                Constraint::Length(2),
-                Constraint::Fill(1),
-                Constraint::Length(1),
-            ],
-        )
-    }
-    fn layout_status_line() -> Layout {
-        Layout::new(
-            ratatui::layout::Direction::Horizontal,
-            vec![Constraint::Fill(1), Constraint::Length(4)],
-        )
-    }
-
     pub fn handle_input<I>(&mut self, input: I) -> Result<Option<PlaybackAction>>
     where
         I: Into<Input>,
@@ -150,6 +133,28 @@ impl UI {
         self.tab_pages
             .handle_input(input, &self.input_map.navigation, &self.library)?;
         Ok(playback_action)
+    }
+
+    fn layout() -> Layout {
+        Layout::new(
+            ratatui::layout::Direction::Vertical,
+            vec![
+                Constraint::Length(2),
+                Constraint::Fill(1),
+                Constraint::Length(1),
+                Constraint::Length(1),
+            ],
+        )
+    }
+    fn layout_status_line() -> Layout {
+        Layout::new(
+            ratatui::layout::Direction::Horizontal,
+            vec![
+                Constraint::Fill(1),
+                Constraint::Length(4),
+                Constraint::Length(4),
+            ],
+        )
     }
 }
 
