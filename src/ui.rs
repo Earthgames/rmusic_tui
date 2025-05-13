@@ -172,22 +172,26 @@ impl Widget for &mut UI {
             .render(mainrect, buf, &self.theme, &self.playback_context);
 
         // Status line
-        let line_rects = UI::layout_status_line().split(rects[2]);
 
-        let length = self.playback_context.length();
-        let left = self.playback_context.left();
-        let sample_rate = self.playback_context.sample_rate() as u64;
-        let played = length - left;
+        Line::from(
+            self.playback_context
+                .lock_queue()
+                .current_track()
+                .clone()
+                .unwrap_or("".into())
+                .display()
+                .to_string()
+                + " "
+                + &self.playback_context.sample_rate().to_string(),
+        )
+        .render(rects[2], buf);
+
+        let line_rects = UI::layout_status_line().split(rects[3]);
 
         // Show time in min:sec and played/total
-        let label = if played == 0 || sample_rate == 0 {
-            "00:00/00:00 ".to_string()
-        } else {
-            // as microseconds
-            let time_per_sample = 1_000_000 / sample_rate;
-
-            let time_played = Duration::from_micros(time_per_sample * played);
-            let time_total = Duration::from_micros(time_per_sample * length);
+        let label = {
+            let time_played = Duration::from_secs(self.playback_context.played_sec());
+            let time_total = Duration::from_secs(self.playback_context.length_sec());
             format!(
                 "{}:{:02}/{}:{:02} ",
                 time_played.as_secs() / 60,
@@ -196,10 +200,12 @@ impl Widget for &mut UI {
                 time_total.as_secs() % 60,
             )
         };
+        let played = self.playback_context.played();
+        let length = self.playback_context.length();
 
         // Play progress line
         LineGauge::default()
-            .ratio(if played == 0 {
+            .ratio(if played == 0 || length == 0 {
                 0.0
             } else {
                 played as f64 / length as f64
@@ -212,6 +218,16 @@ impl Widget for &mut UI {
             .render(line_rects[0], buf);
 
         // Volume level
-        Line::from(format!("{}", self.playback_context.volume_level())).render(line_rects[1], buf);
+        Line::from(format!(" {} ", self.playback_context.volume_level()))
+            .render(line_rects[1], buf);
+        // Queue shuffle
+        Line::from(
+            self.playback_context
+                .lock_queue()
+                .queue_options
+                .shuffle_type
+                .display_small(),
+        )
+        .render(line_rects[2], buf);
     }
 }
