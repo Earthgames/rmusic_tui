@@ -149,7 +149,7 @@ impl QueueView {
         buffer: &mut Buffer,
         playback_context: &ArcPlaybackContext,
     ) {
-        let queue = playback_context.queue.lock().unwrap();
+        let queue = playback_context.lock_queue();
         let list = List::new(queue.queue_items().iter().map(show_queue_item));
         StatefulWidget::render(list, rect, buffer, &mut self.list_state);
     }
