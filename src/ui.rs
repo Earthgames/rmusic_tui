@@ -153,7 +153,7 @@ impl UI {
             ratatui::layout::Direction::Horizontal,
             vec![
                 Constraint::Fill(1),
-                Constraint::Length(4),
+                Constraint::Length(5),
                 Constraint::Length(4),
             ],
         )
@@ -220,15 +220,19 @@ impl Widget for &mut UI {
             .render(line_rects[0], buf);
 
         // Volume level
-        Line::from(format!(" {} ", self.playback_context.volume_level()))
-            .render(line_rects[1], buf);
+        //" 1.00" 4-5 chars
+        Line::from(format!(" {}", self.playback_context.volume_level())).render(line_rects[1], buf);
         // Queue shuffle
+        //" XX " 3-4 chars
         Line::from(
-            self.playback_context
-                .lock_queue()
-                .queue_options
-                .shuffle_type
-                .display_small(),
+            " ".to_string()
+                + self
+                    .playback_context
+                    .lock_queue()
+                    .queue_options
+                    .shuffle_type
+                    .display_small()
+                + " ",
         )
         .render(line_rects[2], buf);
     }

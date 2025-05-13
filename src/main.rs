@@ -1,5 +1,6 @@
 #[cfg(not(debug_assertions))]
 use std::env;
+#[cfg(debug_assertions)]
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::Duration;
