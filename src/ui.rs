@@ -124,6 +124,8 @@ impl UI {
             playback_action = Some(PlaybackAction::FastForward(5))
         } else if media.rewind.contains(&input) {
             playback_action = Some(PlaybackAction::Rewind(5))
+        } else if media.shuffle.contains(&input) {
+            self.playback_context.lock_queue().cycle_shuffle();
         }
 
         if playback_action.is_some() {
