@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{cmp::min, time::Duration};
 
 use anyhow::Result;
 use futures::executor::block_on;
@@ -10,6 +10,7 @@ use ratatui_eventInput::Input;
 use rmusic::{
     database::{
         artist,
+        context::TrackResult,
         library_view::{LibraryView, L1, L2, L3},
         release, track, Library,
     },
@@ -95,14 +96,14 @@ where
     where
         I: Into<Input>,
     {
-        let active_table_state = self.active_list_state();
         let input: Input = input.into();
 
         let mut action: Action = Action::None;
+
         if input_map.list_down.contains(&input) {
-            active_table_state.scroll_down_by(1);
+            self.scroll_down();
         } else if input_map.list_up.contains(&input) {
-            active_table_state.scroll_up_by(1);
+            self.scroll_up();
         } else if input_map.list_select.contains(&input) {
             if self.active_list == ActiveList::Level3 {
                 let index = self.index_l3();
@@ -113,39 +114,71 @@ where
         } else if input_map.list_back.contains(&input) {
             self.active_list = self.previous_list_state();
         } else if input_map.item_set.contains(&input) {
-            match self.active_list {
-                ActiveList::Level1 => {
-                    let index = self.index_l1();
-                    action = block_on(self.library_view.get_context_l1(library, index))?.into()
-                }
-                ActiveList::Level2 => {
-                    let index = self.index_l2();
-                    action = block_on(self.library_view.get_context_l2(library, index))?.into()
-                }
-                ActiveList::Level3 => {
-                    let index = self.index_l3();
-                    action = block_on(self.library_view.get_context_l3(library, index))?.into()
-                }
-            }
+            action = self.get_context(library)?.into();
         } else if input_map.refresh.contains(&input) {
             block_on(self.library_view.sync_with_database_all(library))?;
         }
 
-        // check if library is empty
-        let l1 = self.library_view.get_l1();
-        if l1.is_empty() {
-            return Ok(action);
+        self.sync_with_database(library)?;
+
+        Ok(action)
+    }
+
+    fn scroll_up(&mut self) {
+        let current_index = self.active_list_state().selected().unwrap_or(0);
+        let target_index = if current_index == 0 {
+            self.active_list_size() - 1
+        } else {
+            current_index - 1
+        };
+        *self.active_list_state().selected_mut() = Some(target_index);
+    }
+
+    fn scroll_down(&mut self) {
+        let current_index = self.active_list_state().selected().unwrap_or(0);
+        let target_index = if current_index >= self.active_list_size() - 1 {
+            0
+        } else {
+            current_index + 1
+        };
+        *self.active_list_state().selected_mut() = Some(target_index);
+    }
+
+    fn active_list_size(&self) -> usize {
+        let l1_index = self.table_state_l1.selected().unwrap_or(0);
+        let l2_index = self.table_state_l2.selected().unwrap_or(0);
+        match self.active_list {
+            ActiveList::Level1 => self.library_view.get_l1().len(),
+            ActiveList::Level2 => self.library_view.get_l2(l1_index).len(),
+            ActiveList::Level3 => self.library_view.get_l3((l1_index, l2_index)).len(),
         }
-        // make sure the index exists
-        fn check_index<T>(index: usize, vec: Vec<T>) -> usize {
-            if index >= vec.len() {
-                vec.len() - 1
-            } else {
-                index
+    }
+
+    fn get_context(&mut self, library: &Library) -> TrackResult<QueueItem> {
+        match self.active_list {
+            ActiveList::Level1 => {
+                let index = self.index_l1();
+                block_on(self.library_view.get_context_l1(library, index))
+            }
+            ActiveList::Level2 => {
+                let index = self.index_l2();
+                block_on(self.library_view.get_context_l2(library, index))
+            }
+            ActiveList::Level3 => {
+                let index = self.index_l3();
+                block_on(self.library_view.get_context_l3(library, index))
             }
         }
+    }
+
+    fn sync_with_database(&mut self, library: &Library) -> Result<()> {
+        let l1 = self.library_view.get_l1();
+        if l1.is_empty() {
+            return Ok(());
+        }
         let ind_l1 = if let Some(ind_l1) = self.table_state_l1.selected() {
-            check_index(ind_l1, l1)
+            // make sure the index exists
+            min(ind_l1, l1.len() - 1)
         } else {
             // if we have not selected anything we select something for the user
             self.table_state_l1.select(Some(0));
@@ -160,11 +193,11 @@ where
         let l2 = self.library_view.get_l2(ind_l1);
         if l2.is_empty() {
             self.active_list = ActiveList::Level1;
-            return Ok(action);
+            return Ok(());
         }
 
         let ind_l2 = if let Some(ind_l2) = self.table_state_l2.selected() {
-            check_index(ind_l2, l2)
+            min(ind_l2, l2.len() - 1)
         } else {
             // user will select something
             self.table_state_l2.select(Some(0));
@@ -182,8 +215,7 @@ where
         } else if l3.is_empty() && self.active_list == ActiveList::Level3 {
             self.active_list = ActiveList::Level2;
         }
-
-        Ok(action)
+        Ok(())
     }
 
     fn index_l1(&mut self) -> usize {
@@ -231,7 +263,15 @@ where
         }
     }
 
-    fn next_list_state(&mut self) -> ActiveList {
+    // fn active_list_state(&self) -> &TableState {
+    //     match self.active_list {
+    //         ActiveList::Level1 => &self.table_state_l1,
+    //         ActiveList::Level2 => &self.table_state_l2,
+    //         ActiveList::Level3 => &self.table_state_l3,
+    //     }
+    // }
+
+    fn next_list_state(&self) -> ActiveList {
         match self.active_list {
             ActiveList::Level1 => ActiveList::Level2,
             ActiveList::Level2 => ActiveList::Level3,
@@ -239,18 +279,12 @@ where
         }
     }
 
-    fn previous_list_state(&mut self) -> ActiveList {
+    fn previous_list_state(&self) -> ActiveList {
         match self.active_list {
             ActiveList::Level1 => ActiveList::Level1,
             ActiveList::Level2 => ActiveList::Level1,
             ActiveList::Level3 => ActiveList::Level2,
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn sync_with_database(&mut self, library: &Library) -> Result<()> {
-        block_on(self.library_view.sync_with_database_l1(library))?;
-        Ok(())
     }
 
     fn layout() -> Layout {
