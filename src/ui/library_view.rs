@@ -48,6 +48,7 @@ enum ActiveList {
 pub enum Action {
     Play(QueueItem),
     // Add to queue,
+    Queue(QueueItem, bool),
     // Add to playlist,
     None,
 }
@@ -117,6 +118,8 @@ where
             action = self.get_context(library)?.into();
         } else if input_map.refresh.contains(&input) {
             block_on(self.library_view.sync_with_database_all(library))?;
+        } else if input_map.item_add.contains(&input) {
+            action = Action::Queue(self.get_context(library)?, true);
         }
 
         self.sync_with_database(library)?;

@@ -99,6 +99,11 @@ impl UI {
                     library_view::Action::Play(queue_item) => {
                         playback_action = Some(PlaybackAction::Play(queue_item));
                     }
+                    library_view::Action::Queue(queue_item, flatten) => {
+                        self.playback_context
+                            .lock_queue()
+                            .append_queue_item(queue_item, flatten);
+                    }
                     library_view::Action::None => (),
                 }
             }
