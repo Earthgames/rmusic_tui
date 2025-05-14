@@ -131,6 +131,9 @@ impl UI {
             playback_action = Some(PlaybackAction::Rewind(5))
         } else if media.shuffle.contains(&input) {
             self.playback_context.lock_queue().cycle_shuffle();
+        } else if media.repeat.contains(&input) {
+            let repeat = &mut self.playback_context.lock_queue().queue_options.repeat;
+            *repeat = !*repeat;
         }
 
         if playback_action.is_some() {
@@ -159,7 +162,8 @@ impl UI {
             vec![
                 Constraint::Fill(1),
                 Constraint::Length(5),
-                Constraint::Length(4),
+                Constraint::Length(3),
+                Constraint::Length(2),
             ],
         )
     }
@@ -228,7 +232,7 @@ impl Widget for &mut UI {
         //" 1.00" 4-5 chars
         Line::from(format!(" {}", self.playback_context.volume_level())).render(line_rects[1], buf);
         // Queue shuffle
-        //" XX " 3-4 chars
+        //" XX" 2-3 chars
         Line::from(
             " ".to_string()
                 + self
@@ -236,9 +240,19 @@ impl Widget for &mut UI {
                     .lock_queue()
                     .queue_options
                     .shuffle_type
-                    .display_small()
-                + " ",
+                    .display_small(),
         )
         .render(line_rects[2], buf);
+        // Queue repeat
+        //" R" 1-2 chars
+        Line::from(
+            " ".to_string()
+                + if self.playback_context.lock_queue().queue_options.repeat {
+                    "R"
+                } else {
+                    ""
+                },
+        )
+        .render(line_rects[3], buf);
     }
 }
