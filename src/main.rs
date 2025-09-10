@@ -49,6 +49,8 @@ fn main() -> Result<()> {
     let mut cach_dir = env::temp_dir();
     cach_dir.push("rmusic-tui.log");
 
+    _ = std::fs::remove_file(&cach_dir);
+
     let file_options = TuiLoggerFile::new(cach_dir.to_str().unwrap())
         .output_level(Some(TuiLoggerLevelOutput::Abbreviated))
         .output_file(false)

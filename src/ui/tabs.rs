@@ -1,14 +1,14 @@
-use anyhow::{Ok, Result};
-use futures::executor::block_on;
+use anyhow::Result;
 use ratatui::widgets::Widget;
 use ratatui::{
     prelude::*,
     widgets::{List, ListState, Tabs},
 };
 use ratatui_eventInput::{Input, Key};
-use rmusic::database::{self, artist, release, track, Library};
+use rmusic::database::Library;
+use rmusic::models::{Artist, Release, Track};
 use rmusic::playback::playback_context::ArcPlaybackContext;
-use rmusic::queue::QueueItem;
+use rmusic::queue::queue_items::QueueItem;
 use rmusic_tui::settings::input::Navigation;
 use tui_logger::*;
 
@@ -23,7 +23,7 @@ pub struct TabPages {
 
 #[allow(dead_code)]
 impl TabPages {
-    pub fn new(tab_pages: Vec<TabPage>, library: &Library) -> Result<TabPages> {
+    pub fn new(tab_pages: Vec<TabPage>, library: &mut Library) -> Result<TabPages> {
         let mut tab_pages = TabPages {
             tab_pages,
             active_tab_index: 0,
@@ -32,7 +32,7 @@ impl TabPages {
         Ok(tab_pages)
     }
 
-    pub fn sync_with_database(&mut self, library: &Library) -> Result<()> {
+    pub fn sync_with_database(&mut self, library: &mut Library) -> Result<()> {
         self.tab_pages[self.active_tab_index].sync_with_database(library)
     }
 
@@ -52,7 +52,7 @@ impl TabPages {
         &mut self,
         input: I,
         input_map: &Navigation,
-        library: &Library,
+        library: &mut Library,
     ) -> Result<()>
     where
         I: Into<Input>,
@@ -81,7 +81,7 @@ impl TabPages {
 pub enum TabPage {
     Artists(Artists),
     FileExplorer(FileExplorer),
-    LibraryView(LibraryViewer<artist::Model, release::Model, track::Model>),
+    LibraryView(LibraryViewer<Artist, Release, Track>),
     TuiLogger(TuiWidgetState),
     Queue(QueueView),
 }
@@ -96,7 +96,7 @@ impl TabPage {
             TabPage::Queue(_) => "Queue",
         }
     }
-    pub fn sync_with_database(&mut self, library: &Library) -> Result<()> {
+    pub fn sync_with_database(&mut self, library: &mut Library) -> Result<()> {
         match self {
             TabPage::Artists(artists) => artists.sync_with_database(library),
             _ => Ok(()),
@@ -169,16 +169,16 @@ impl QueueView {
 
 fn show_queue_item(item: &QueueItem) -> &str {
     match item {
-        QueueItem::Track(path_buf) => path_buf.to_str().unwrap(),
-        QueueItem::PlayList(_, _) => "Playlist",
-        QueueItem::Album(_, _) => "Album",
+        QueueItem::Track(track) => &track.track().name,
+        QueueItem::Playlist(_) => "Playlist",
+        QueueItem::Album(_) => "Album",
     }
 }
 
 #[derive(Clone)]
 pub struct Artists {
     list_state: ListState,
-    list: Vec<database::Artist>,
+    list: Vec<Artist>,
 }
 
 #[allow(dead_code)]
@@ -202,8 +202,9 @@ impl Artists {
         }
     }
 
-    pub fn sync_with_database(&mut self, library: &Library) -> Result<()> {
-        self.list = block_on(library.find_all::<artist::Entity>())?
+    pub fn sync_with_database(&mut self, library: &mut Library) -> Result<()> {
+        self.list = library
+            .find_all::<Artist>()?
             .into_iter()
             .collect::<Vec<_>>();
         Ok(())

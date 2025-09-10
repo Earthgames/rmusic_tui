@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use explorer::FileExplorer;
 use futures::executor::block_on;
 use library_view::LibraryViewer;
@@ -46,18 +46,18 @@ impl UI {
         let file_exporer = FileExplorer::new()?;
         // file_exporer.set_filter(vec!["opus".to_string()])?;
 
-        let library = block_on(Library::try_new())?;
+        let mut library = Library::try_new()?;
 
         let tab_pages = vec![
             // TabPage::Artists(artist_tab),
-            TabPage::LibraryView(LibraryViewer::new(&library)?),
+            TabPage::LibraryView(LibraryViewer::new(&mut library)?),
             TabPage::FileExplorer(file_exporer),
             TabPage::Queue(QueueView::new()),
             TabPage::TuiLogger(
                 tui_logger::TuiWidgetState::new().set_default_display_level(log::LevelFilter::Warn),
             ),
         ];
-        let tab_pages = TabPages::new(tab_pages, &library)?;
+        let tab_pages = TabPages::new(tab_pages, &mut library)?;
 
         Ok(Self {
             tab_pages,
@@ -79,30 +79,45 @@ impl UI {
         match &mut self.tab_pages.active_tab_mut() {
             TabPage::Artists(artists) => artists.handle_input(input, navigation),
             TabPage::FileExplorer(file_explorer) => {
-                if let Some(file) = file_explorer.handle(input, navigation)? {
+                let file = match file_explorer.handle(input, navigation) {
+                    Ok(file) => file,
+                    Err(err) => {
+                        error!("Error while handeling file_explorer input: {err}");
+                        return Ok(playback_action);
+                    }
+                };
+                if let Some(file) = file {
                     if file.is_dir() {
                         let progress = Arc::new(AtomicU8::new(0));
-                        let db = self.library.clone();
+                        let mut db = self.library.try_clone()?;
                         let path = file.path().to_path_buf();
                         thread::spawn(move || {
                             if let Err(err) = block_on(db.add_folder_rec(&path, &progress)) {
                                 error!("Error while adding folder to library: {:?}", err);
                             }
                         });
-                    } else if let Err(err) = block_on(self.library.add_file(file.path())) {
+                    } else if let Err(err) = self.library.add_file(file.path()) {
                         error!("Error while adding file to library: {:?}", err);
                     }
                 }
             }
             TabPage::LibraryView(library_view) => {
-                match library_view.handle_input(input, navigation, &self.library)? {
+                let action = match library_view.handle_input(input, navigation, &mut self.library) {
+                    Ok(action) => action,
+                    Err(err) => {
+                        error!("Error while handeling library_view input: {err}");
+                        return Ok(playback_action);
+                    }
+                };
+                match action {
                     library_view::Action::Play(queue_item) => {
                         playback_action = Some(PlaybackAction::Play(queue_item));
                     }
                     library_view::Action::Queue(queue_item, flatten) => {
-                        self.playback_context
-                            .lock_queue()
-                            .append_queue_item(queue_item, flatten);
+                        //TODO:
+                        // self.playback_context
+                        //     .lock_queue()
+                        //     .append_queue_item(queue_item, flatten);
                     }
                     library_view::Action::None => (),
                 }
@@ -132,8 +147,9 @@ impl UI {
         } else if media.shuffle.contains(&input) {
             self.playback_context.lock_queue().cycle_shuffle();
         } else if media.repeat.contains(&input) {
-            let repeat = &mut self.playback_context.lock_queue().queue_options.repeat;
-            *repeat = !*repeat;
+            //TODO:
+            // let repeat = &mut self.playback_context.lock_queue().queue_options.repeat;
+            // *repeat = !*repeat;
         }
 
         if playback_action.is_some() {
@@ -141,7 +157,7 @@ impl UI {
         }
 
         self.tab_pages
-            .handle_input(input, &self.input_map.navigation, &self.library)?;
+            .handle_input(input, &self.input_map.navigation, &mut self.library)?;
         Ok(playback_action)
     }
 
@@ -243,16 +259,18 @@ impl Widget for &mut UI {
                     .display_small(),
         )
         .render(line_rects[2], buf);
+
+        //TODO:
         // Queue repeat
         //" R" 1-2 chars
-        Line::from(
-            " ".to_string()
-                + if self.playback_context.lock_queue().queue_options.repeat {
-                    "R"
-                } else {
-                    ""
-                },
-        )
-        .render(line_rects[3], buf);
+        // Line::from(
+        //     " ".to_string()
+        //         + if self.playback_context.lock_queue().queue_options.repeat {
+        //             "R"
+        //         } else {
+        //             ""
+        //         },
+        // )
+        // .render(line_rects[3], buf);
     }
 }

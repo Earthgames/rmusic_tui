@@ -1,7 +1,6 @@
 use std::{cmp::min, time::Duration};
 
 use anyhow::Result;
-use futures::executor::block_on;
 use ratatui::{
     prelude::*,
     widgets::{Cell, Row, Table, TableState},
@@ -9,26 +8,22 @@ use ratatui::{
 use ratatui_eventInput::Input;
 use rmusic::{
     database::{
-        artist,
         context::TrackResult,
         library_view::{LibraryView, L1, L2, L3},
-        release, track, Library,
+        Library,
     },
-    queue::QueueItem,
+    models::{Artist, Release, Track},
+    queue::queue_items::QueueItem,
 };
 use rmusic_tui::settings::input::Navigation;
-use sea_orm::ModelTrait;
 
 use super::theme::Theme;
 
 pub struct LibraryViewer<A, B, C>
 where
-    A: L1<B, C> + Sync,
-    B: L2<C> + ModelTrait + Sync,
+    A: L1<B, C>,
+    B: L2<C>,
     C: L3,
-    <<C as sea_orm::ModelTrait>::Entity as sea_orm::EntityTrait>::Model:
-        rmusic::database::library_view::IntoFR<C>,
-    <B as sea_orm::ModelTrait>::Entity: sea_orm::Related<<C as sea_orm::ModelTrait>::Entity>,
 {
     table_state_l1: TableState,
     table_state_l2: TableState,
@@ -59,26 +54,17 @@ impl From<()> for Action {
     }
 }
 
-impl From<QueueItem> for Action {
-    fn from(item: QueueItem) -> Self {
-        Self::Play(item)
-    }
-}
-
 impl<A, B, C> LibraryViewer<A, B, C>
 where
-    A: L1<B, C> + Sync,
-    B: L2<C> + ModelTrait + Sync,
-    C: L3,
-    <<C as sea_orm::ModelTrait>::Entity as sea_orm::EntityTrait>::Model:
-        rmusic::database::library_view::IntoFR<C>,
-    <B as sea_orm::ModelTrait>::Entity: sea_orm::Related<<C as sea_orm::ModelTrait>::Entity>,
+    A: L1<B, C> + Clone,
+    B: L2<C> + Clone,
+    C: L3 + Clone,
 {
-    pub fn new(library: &Library) -> Result<Self> {
+    pub fn new(library: &mut Library) -> Result<Self> {
         let mut table_state_l1 = TableState::default();
         table_state_l1.select(Some(0));
-        let mut library_view = block_on(LibraryView::new(library))?;
-        block_on(library_view.sync_with_database_all(library))?;
+        let mut library_view = LibraryView::new(library)?;
+        library_view.sync_with_database_all(library)?;
         Ok(LibraryViewer {
             table_state_l1,
             table_state_l2: TableState::default(),
@@ -92,7 +78,7 @@ where
         &mut self,
         input: I,
         input_map: &Navigation,
-        library: &Library,
+        library: &mut Library,
     ) -> Result<Action>
     where
         I: Into<Input>,
@@ -108,16 +94,16 @@ where
         } else if input_map.list_select.contains(&input) {
             if self.active_list == ActiveList::Level3 {
                 let index = self.index_l3();
-                action = block_on(self.library_view.get_context_list_l3(library, index))?.into()
+                action = Action::Play(self.library_view.get_context_list_l3(library, index)?)
             } else {
                 self.active_list = self.next_list_state();
             }
         } else if input_map.list_back.contains(&input) {
             self.active_list = self.previous_list_state();
         } else if input_map.item_set.contains(&input) {
-            action = self.get_context(library)?.into();
+            action = Action::Play(self.get_context(library)?);
         } else if input_map.refresh.contains(&input) {
-            block_on(self.library_view.sync_with_database_all(library))?;
+            self.library_view.sync_with_database_all(library)?;
         } else if input_map.item_add.contains(&input) {
             action = Action::Queue(self.get_context(library)?, true);
         }
@@ -130,16 +116,16 @@ where
     fn scroll_up(&mut self) {
         let current_index = self.active_list_state().selected().unwrap_or(0);
         let target_index = if current_index == 0 {
-            self.active_list_size() - 1
+            self.active_list_size().saturating_sub(1)
         } else {
-            current_index - 1
+            current_index.saturating_sub(1)
         };
         *self.active_list_state().selected_mut() = Some(target_index);
     }
 
     fn scroll_down(&mut self) {
         let current_index = self.active_list_state().selected().unwrap_or(0);
-        let target_index = if current_index >= self.active_list_size() - 1 {
+        let target_index = if current_index >= self.active_list_size().saturating_sub(1) {
             0
         } else {
             current_index + 1
@@ -157,24 +143,24 @@ where
         }
     }
 
-    fn get_context(&mut self, library: &Library) -> TrackResult<QueueItem> {
+    fn get_context(&mut self, library: &mut Library) -> TrackResult<QueueItem> {
         match self.active_list {
             ActiveList::Level1 => {
                 let index = self.index_l1();
-                block_on(self.library_view.get_context_l1(library, index))
+                self.library_view.get_context_l1(library, index)
             }
             ActiveList::Level2 => {
                 let index = self.index_l2();
-                block_on(self.library_view.get_context_l2(library, index))
+                self.library_view.get_context_l2(library, index)
             }
             ActiveList::Level3 => {
                 let index = self.index_l3();
-                block_on(self.library_view.get_context_l3(library, index))
+                self.library_view.get_context_l3(library, index)
             }
         }
     }
 
-    fn sync_with_database(&mut self, library: &Library) -> Result<()> {
+    fn sync_with_database(&mut self, library: &mut Library) -> Result<()> {
         let l1 = self.library_view.get_l1();
         if l1.is_empty() {
             return Ok(());
@@ -188,10 +174,8 @@ where
             0
         };
 
-        block_on(
-            self.library_view
-                .sync_with_database_l2_item(library, ind_l1),
-        )?;
+        self.library_view
+            .sync_with_database_l2_item(library, ind_l1)?;
 
         let l2 = self.library_view.get_l2(ind_l1);
         if l2.is_empty() {
@@ -207,10 +191,8 @@ where
             0
         };
 
-        block_on(
-            self.library_view
-                .sync_with_database_l3_item(library, (ind_l1, ind_l2)),
-        )?;
+        self.library_view
+            .sync_with_database_l3_item(library, (ind_l1, ind_l2))?;
 
         let l3 = self.library_view.get_l3((ind_l1, ind_l2));
         if !l3.is_empty() && self.table_state_l3.selected().is_none() {
@@ -332,7 +314,7 @@ fn cell_al_string(content: String, alignment: Alignment) -> Cell<'static> {
     Cell::new(Text::from(content).alignment(alignment))
 }
 
-impl Viewable for artist::Model {
+impl Viewable for Artist {
     fn to_view(&self) -> Row {
         Row::new(vec![cell_al(&self.name, Alignment::Left)])
     }
@@ -341,7 +323,7 @@ impl Viewable for artist::Model {
     }
 }
 
-impl Viewable for release::Model {
+impl Viewable for Release {
     fn to_view(&self) -> Row {
         Row::new(vec![cell_al(&self.name, Alignment::Left)])
     }
@@ -350,7 +332,7 @@ impl Viewable for release::Model {
     }
 }
 
-impl Viewable for track::Model {
+impl Viewable for Track {
     fn to_view(&self) -> Row {
         let duration = Duration::from_secs(self.duration.try_into().expect("fuck the database"));
         let seconds = duration.as_secs() % 60;
@@ -367,14 +349,12 @@ impl Viewable for track::Model {
 
 impl<A, B, C> LibraryViewer<A, B, C>
 where
-    A: L1<B, C> + Sync + Viewable,
-    B: L2<C> + ModelTrait + Sync + Viewable,
-    C: L3 + Viewable,
-    <<C as sea_orm::ModelTrait>::Entity as sea_orm::EntityTrait>::Model:
-        rmusic::database::library_view::IntoFR<C>,
-    <B as sea_orm::ModelTrait>::Entity: sea_orm::Related<<C as sea_orm::ModelTrait>::Entity>,
+    A: L1<B, C> + Sync + Viewable + Clone,
+    B: L2<C> + Sync + Viewable + Clone,
+    C: L3 + Viewable + Clone,
 {
     pub fn render(&mut self, area: Rect, buffer: &mut Buffer, theme: &Theme) {
+        // TODO: scroll or wrap the text
         let rects = Self::layout().split(area);
         let mut l1 = Self::style(
             Table::new(
